@@ -176,6 +176,38 @@ footer strong{font-size:16px}
  .product{grid-template-columns:31% 1fr}.product-info{padding:12px}.product p{font-size:10px}
 }
 
+
+/* Vilar Burguer | revisão de largura: telas amplas aproveitadas sem perder respiro */
+@media(min-width:1181px){
+  .shell{width:calc(100% - clamp(36px,3.1vw,88px));max-width:none;margin-inline:auto}
+  .catalog{gap:18px}
+  .catalog-tools{column-gap:26px}
+  .search-row{flex-basis:clamp(360px,26vw,570px)}
+}
+@media(min-width:1600px){
+  .catalog{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+  .hero{min-height:clamp(365px,23vw,450px)}
+  .hero-copy{width:54%;max-width:none;padding:clamp(36px,3vw,64px) clamp(52px,4vw,92px)}
+  .hero h1{font-size:clamp(58px,3.8vw,76px)}
+  .hero-image{width:62%;background-position:center 48%}
+  .product{min-height:213px}
+  .product-image{min-height:207px}
+  .product-info{padding:22px 18px 18px 18px}
+  .product h3{font-size:19px}
+  .product p{font-size:12px}
+  .highlights{margin-bottom:34px}
+}
+@media(min-width:2250px){
+  .catalog{grid-template-columns:repeat(5,minmax(0,1fr));gap:20px}
+  .hero{min-height:480px}
+  .hero-copy{width:47%;padding-inline:clamp(80px,5vw,144px)}
+  .hero h1{font-size:82px}
+  .hero p{font-size:18px;max-width:510px}
+  .section-head h2{font-size:44px}
+  .highlight{min-height:87px;padding-inline:35px}
+  .product{min-height:226px}
+}
+
   </style>
 </head>
 <body>
