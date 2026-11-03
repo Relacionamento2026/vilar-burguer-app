@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: vilar-burguer-pedidos
+    runtime: static
+    buildCommand: mkdir -p site && cp index.html site/index.html
+    staticPublishPath: ./site
+    autoDeployTrigger: commit
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
