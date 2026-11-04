@@ -63,7 +63,7 @@ Aplicação responsiva com cardápio editável, personalização, carrinho, gest
 - O dashboard usa `vilar_daily_sales` para mostrar, por dia em São Paulo, confirmações de pagamento, entregas e faturamento real. O ticket médio usa somente vendas reais entregues.
 - Em **Configurações**, o administrador pode trocar a própria senha após confirmar a senha atual, usando Supabase Auth.
 - A edição de fotos continua disponível pelo painel (JPEG/PNG/WebP, até 5 MB), com armazenamento Supabase separado.
-- **Vencimento contratual informado:** 25/11/2026, R$ 350. Registrado em `platform_contract` apenas para controle. **Aviso e suspensão automática estão desativados**, até confirmação da natureza da cobrança, cláusula contratual e forma de reativação. Nenhum bloqueio de dados ou pedidos existentes foi configurado.
+- **Vencimento contratual informado:** 25/11/2026, R$ 350. Registrado em `platform_contract` apenas para controle. **Aviso informativo programado para o painel a partir do vencimento; suspensão automática desativada.** A natureza da cobrança, a cláusula contratual e a forma de reativação ainda precisam ser confirmadas. Nenhum bloqueio de dados ou pedidos existentes foi configurado.
 
 ## Habilitação do Pix (fase futura, depende do proprietário)
 
