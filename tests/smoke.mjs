@@ -29,5 +29,14 @@ assert(statusApi.includes('tracking_token=eq.'),'Tracking must require secret to
 assert(!statusApi.includes('customer_phone')&&!statusApi.includes('customer_name'),'Tracking API must not expose PII');
 assert(adminJs.includes('nextStatuses')&&adminJs.includes('o.payment_status!=="paid"'),'Admin statuses must require Pix');
 assert(adminJs.includes('data-wa-status'),'Admin should be able to share status manually');
-console.log('✓ Pix obrigatório, acompanhamento, segurança e sintaxe verificados.');
+assert(admin.includes('data-tab="demo_orders"'),'Demo tab must exist');
+assert(adminJs.includes('function demoOrders()')&&adminJs.includes('function createDemoOrder('),'Admin demo workflow must exist');
+assert(adminJs.includes('sb.from("demo_orders")'),'Demo orders must use isolated table');
+assert(adminJs.includes('function changePassword(')&&adminJs.includes('sb.auth.updateUser({password:pass})'),'Password change must be self-service');
+assert(adminJs.includes('sb.rpc("vilar_daily_sales"'),'Dashboard must use server-side daily aggregation');
+assert(adminJs.includes('2026')===false||adminJs.includes('platform_contract'),'Contract due date must be server-side');
+assert(tracking.includes('demo_token'),'Tracking page must support isolated demo links');
+assert(statusApi.includes('demo_order_events')&&statusApi.includes('is_test:isTest'),'Status API must distinguish test orders');
+assert(!adminJs.includes('sb.from("orders").insert({product_id'),'Demo must never write to real orders');
+console.log('✓ Pix obrigatório, testes isolados, relatórios, senha e acompanhamento verificados.');
 
