@@ -11,7 +11,9 @@ assert(!config.includes('service_role'),'Never publish a service role key in fro
 const manifest=JSON.parse(read('manifest.webmanifest'));
 assert(manifest.name.includes('Vilar Burguer'));assert(manifest.display==='standalone');
 const edge=read('supabase/functions/submit-order/index.ts');
-for(const value of ['SERVICE_ROLE_KEY','subtotal_cents','idempotency_key','delivery_fee_cents'])assert(edge.includes(value),'Missing backend control '+value);
+assert(!edge.includes('SERVICE_ROLE_KEY'),'Blocked checkout must not need privileged credentials');
+assert(edge.includes('status:503')&&edge.includes('BLOQUEIO COMERCIAL'),'Checkout must fail closed');
+assert(!edge.includes('/rest/v1/orders'),'Checkout must not insert orders without payment');
 const tracking=read('acompanhar.html');
 const start=tracking.lastIndexOf('<script>'),end=tracking.lastIndexOf('</script>');
 assert(start>=0&&end>start,'Tracking page must have a script');
@@ -21,7 +23,7 @@ assert(tracking.includes('order-status?token='),'Tracking must fetch private-tok
 assert(index.includes('href="./acompanhar.html"'),'Tracking page must be linked');
 assert(app.includes('settings.payment_gateway_ready===true'),'Checkout must require ready payment gateway');
 assert(!app.includes('fetch(CONFIG.checkoutFunction'),'Public checkout must not submit before Pix integration');
-assert(edge.includes('BLOQUEIO COMERCIAL')&&edge.includes('return reply(503'),'Backend must block unpaid checkout');
+assert(edge.includes('BLOQUEIO COMERCIAL')&&edge.includes('status:503'),'Backend must block unpaid checkout');
 const statusApi=read('supabase/functions/order-status/index.ts');
 assert(statusApi.includes('tracking_token=eq.'),'Tracking must require secret token');
 assert(!statusApi.includes('customer_phone')&&!statusApi.includes('customer_name'),'Tracking API must not expose PII');
