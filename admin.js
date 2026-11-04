@@ -243,20 +243,21 @@ function settings(){
  return '<form class="panel" id="settingsForm"><div class="panel-head"><h2>Informações da loja</h2><button class="btn primary" type="submit">Salvar configurações</button></div>'+
  '<div class="grid">'+field("store_name","Nome",x.store_name||"Vilar Burguer","text",'required')+field("whatsapp","WhatsApp (DDI + DDD + número)",x.whatsapp||"","tel",'required pattern="[0-9]{12,13}"')+
  field("instagram","Instagram",x.instagram||"","text")+field("city","Cidade padrão (opcional)",x.city||"","text")+'</div>'+
- field("accepting_orders","Aceitar novos pedidos",x.accepting_orders,"checkbox")+
+ '<div class="alert"><b>Pagamento Pix antecipado:</b> o checkout permanecerá bloqueado até a integração com um provedor e confirmação automática por webhook. Não é possível habilitar pedidos manualmente.</div>'+
+ '<label class="checkline"><input type="checkbox" name="accepting_orders" '+(x.accepting_orders?"checked":"")+' '+(!x.payment_gateway_ready?"disabled":"")+'> Aceitar novos pedidos (somente após integração Pix)</label>'+
  choose("open_override","Estado da loja",x.open_override===null?"auto":String(x.open_override),[["auto","Usar horários / ainda não configurados"],["true","Aberto manualmente"],["false","Fechado manualmente"]])+
  '<div class="grid">'+field("minimum_order","Pedido mínimo (R$)",reais(x.minimum_order_cents),"number",'min="0" step="0.01"')+
  field("free_delivery_from","Frete grátis a partir de (R$, opcional)",x.free_delivery_from_cents===null?"":reais(x.free_delivery_from_cents),"number",'min="0" step="0.01"')+'</div>'+
  field("delivery_note","Aviso sobre entrega",x.delivery_note||"","textarea",'maxlength="400"')+
- '<h3>Formas de pagamento</h3><div class="grid three">'+["Pix","Dinheiro","Cartão na entrega"].map(k=>'<label class="checkline"><input type="checkbox" name="pay" value="'+k+'" '+((x.payment_methods||[]).includes(k)?"checked":"")+'> '+k+'</label>').join("")+'</div>'+
+ '<h3>Forma de pagamento</h3><div class="alert">🔒 <b>Pix antecipado obrigatório.</b> Dinheiro e cartão na entrega estão desabilitados. A conta de recebimento ainda não foi definida.</div>'+ 
  '<h3>Horários de funcionamento</h3><p class="muted small">Se nenhum dia for marcado, os horários ficam como “a confirmar”. Configure os dias para bloquear pedidos fora do expediente.</p><div class="day-grid">'+hours+'</div>'+
  '<div class="form-actions"><button class="btn primary" type="submit">Salvar configurações</button></div></form>';
 }
 async function saveSettings(e){
  e.preventDefault();const f=new FormData(e.currentTarget),get=k=>String(f.get(k)||"").trim();
- const payment=f.getAll("pay");if(!payment.length){toast("Selecione ao menos uma forma de pagamento.",true);return;}
+ const payment=["Pix"];
  const hours={};for(const [k] of days){if(f.has("day_"+k)){const open=get("open_"+k),close=get("close_"+k);if(!open||!close){toast("Preencha os horários marcados.",true);return;}hours[k]={open,close};}}
- const x={store_name:get("store_name"),whatsapp:get("whatsapp").replace(/\D/g,""),instagram:get("instagram"),city:get("city"),accepting_orders:f.has("accepting_orders"),open_override:get("open_override")==="auto"?null:get("open_override")==="true",minimum_order_cents:cents(get("minimum_order")),free_delivery_from_cents:get("free_delivery_from")?cents(get("free_delivery_from")):null,delivery_note:get("delivery_note"),payment_methods:payment,opening_hours:hours,updated_at:new Date().toISOString()};
+ const x={store_name:get("store_name"),whatsapp:get("whatsapp").replace(/\D/g,""),instagram:get("instagram"),city:get("city"),accepting_orders:f.has("accepting_orders")&&state.data.store_settings?.[0]?.payment_gateway_ready===true,open_override:get("open_override")==="auto"?null:get("open_override")==="true",minimum_order_cents:cents(get("minimum_order")),free_delivery_from_cents:get("free_delivery_from")?cents(get("free_delivery_from")):null,delivery_note:get("delivery_note"),payment_methods:payment,opening_hours:hours,updated_at:new Date().toISOString()};
  const {error}=await sb.from("store_settings").update(x).eq("id",1);
  if(error){toast(error.message,true);return;}toast("Configurações salvas.");await loadAll();
 }
@@ -288,6 +289,33 @@ $("#adminContent").addEventListener("click",e=>{
  else if(ord)showOrder(ord.dataset.order);else if(go)selectTab(go.dataset.goto);
  else if(e.target.closest("#exportOrders"))exportCsv();
 });
+
+$("#editFields").addEventListener("click",async e=>{
+ const copy=e.target.closest("[data-copy-track]"),wa=e.target.closest("[data-wa-status]");
+ if(!copy&&!wa)return;
+ const id=(copy||wa).dataset.copyTrack||(copy||wa).dataset.waStatus;
+ const o=(state.data.orders||[]).find(x=>x.id===id);
+ if(!o||o.payment_status!=="paid"||!o.tracking_token){toast("Acompanhamento disponível somente após Pix aprovado.",true);return;}
+ const url=trackingUrl(o);
+ if(copy){
+  try{await navigator.clipboard.writeText(url);toast("Link de acompanhamento copiado.");}
+  catch(err){window.prompt("Copie o link:",url);}
+ }else{
+  const phone=String(o.customer_phone||"").replace(/\D/g,"");
+  if(![10,11].includes(phone.length)){toast("Telefone do cliente inválido.",true);return;}
+  const text="Olá, "+o.customer_name+"! 🍔 Aqui é o Vilar Burguer. O status do seu pedido #"+o.order_code+" é: *"+(statuses[o.status]||o.status)+"*. Acompanhe as próximas atualizações pelo link: "+url+"\n\nMensagem enviada pela equipe do Vilar Burguer.";
+  window.open("https://wa.me/55"+phone+"?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");
+ }
+});
+async function refreshOrdersQuietly(){
+ if(!state.user||state.tab!=="orders"||document.hidden||$("#editDialog").open)return;
+ const {data,error}=await sb.from("orders").select("*").order("created_at",{ascending:false}).limit(500);
+ if(error||!$("#ordersTable"))return;
+ state.data.orders=data||[];
+ const filter=$("#orderFilter")?.value||"";
+ $("#ordersTable").innerHTML=ordersTable(state.data.orders.filter(x=>!filter||x.status===filter));
+}
+setInterval(refreshOrdersQuietly,12000);
 $("#adminContent").addEventListener("change",e=>{const s=e.target.closest("[data-status]");if(s)changeStatus(s.dataset.status,s.value);if(e.target.id==="orderFilter"){const v=e.target.value;$("#ordersTable").innerHTML=ordersTable((state.data.orders||[]).filter(x=>!v||x.status===v));}});
 $("#adminContent").addEventListener("submit",e=>{if(e.target.id==="settingsForm")saveSettings(e);});
 $("#editForm").addEventListener("submit",saveEditor);
