@@ -107,26 +107,8 @@ function renderCart(){
  }).join("");
  updateShipping();
 }
-function message(data,order){
- const lines=["🍔 *PEDIDO — VILAR BURGUER*","#"+order.order_code,"","*CLIENTE*",clean(data.name),"Telefone: "+clean(data.phone),"","*ENTREGA*",clean(data.street)+", "+clean(data.number),"CEP: "+clean(data.zip),"Bairro: "+clean(data.neighborhood),"Cidade: "+clean(data.city)];
- if(clean(data.complement))lines.push("Complemento: "+clean(data.complement));
- if(clean(data.reference))lines.push("Referência: "+clean(data.reference));
- lines.push("","*ITENS DO PEDIDO*");
- (order.items||[]).forEach((i,n)=>{
-  lines.push((n+1)+". "+i.qty+"x "+i.name+" — "+money(i.line_total_cents));
-  if(i.extras?.length)lines.push("   Adicionais: "+i.extras.map(e=>e.name).join(", "));
-  if(i.sauce&&i.sauce!=="Sem preferência")lines.push("   Molho: "+i.sauce);
-  if(i.notes)lines.push("   Obs.: "+i.notes);
- });
- lines.push("","*RESUMO*","Produtos: "+money(order.subtotal_cents),"Entrega: "+(order.delivery_fee_cents===null?"a confirmar":money(order.delivery_fee_cents)));
- if(order.discount_cents)lines.push("Desconto: -"+money(order.discount_cents));
- lines.push("*Total: "+(order.total_cents===null?"a confirmar com a loja":money(order.total_cents))+"*");
- lines.push("Pagamento: "+clean(data.payment));
- if(clean(data.change))lines.push("Troco: "+clean(data.change));
- if(clean(data.notes))lines.push("Observações: "+clean(data.notes));
- lines.push("","⚠️ *Solicitação ainda não confirmada.* Por favor, confirme o recebimento, a disponibilidade e a entrega.");
- return lines.join("\n");
-}
+// O WhatsApp de confirmação só será integrado após o Pix aprovado pelo provedor.
+
 async function publicData(table,order){
  const url=CONFIG.url+"/rest/v1/"+table+"?select=*&"+(table==="store_settings"?"id=eq.1":table==="delivery_zones"?"active=eq.true":"active=eq.true")+(order?"&order="+order+".asc":"");
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
@@ -173,7 +155,6 @@ $("#openCartTop").addEventListener("click",()=>toggleDialog("cart",true));$("#mo
 ["#closeModal","#closeCart","#overlay","#backToMenu"].forEach(s=>$(s).addEventListener("click",closeAll));
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAll();if(e.key!=="Tab")return;const active=document.querySelector(".modal.show, .drawer.show");if(!active)return;const els=[...active.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]')].filter(el=>el.getClientRects().length);if(!els.length)return;if(e.shiftKey&&document.activeElement===els[0]){e.preventDefault();els.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===els.at(-1)){e.preventDefault();els[0].focus();}});
 $("#cartItems").addEventListener("click",e=>{const rm=e.target.closest("[data-remove]"),q=e.target.closest("[data-qty]");if(rm){cart.splice(Number(rm.dataset.remove),1);persist();renderCart();}else if(q){const i=Number(q.dataset.qty),delta=Number(q.dataset.delta);if(cart[i]){cart[i].qty+=delta;if(cart[i].qty<=0)cart.splice(i,1);else cart[i].qty=Math.min(50,cart[i].qty);persist();renderCart();}}});
-$("#payment").addEventListener("change",e=>$("#changeBlock").classList.toggle("hide",e.target.value!=="Dinheiro"));
 $("#neighborhood").addEventListener("input",updateShipping);$("#city").addEventListener("input",updateShipping);
 $("#checkoutForm").addEventListener("input",()=>{checkoutKey=crypto.randomUUID();});
 $("#checkoutForm").addEventListener("submit",e=>{
