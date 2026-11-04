@@ -233,7 +233,7 @@ function settings(){
  '<div class="grid">'+field("minimum_order","Pedido mínimo (R$)",reais(x.minimum_order_cents),"number",'min="0" step="0.01"')+
  field("free_delivery_from","Frete grátis a partir de (R$, opcional)",x.free_delivery_from_cents===null?"":reais(x.free_delivery_from_cents),"number",'min="0" step="0.01"')+'</div>'+
  field("delivery_note","Aviso sobre entrega",x.delivery_note||"","textarea",'maxlength="400"')+
- '<h3>Formas de pagamento</h3><div class="grid three">'+["Pix","Dinheiro","Cartão na entrega"].map(k=>'<label class="checkline"><input type="checkbox" name="pay" value="'+k+'" '+(x.payment_methods||[]).includes(k)?"checked":"")+'> '+k+'</label>').join("")+'</div>'+
+ '<h3>Formas de pagamento</h3><div class="grid three">'+["Pix","Dinheiro","Cartão na entrega"].map(k=>'<label class="checkline"><input type="checkbox" name="pay" value="'+k+'" '+((x.payment_methods||[]).includes(k)?"checked":"")+'> '+k+'</label>').join("")+'</div>'+
  '<h3>Horários de funcionamento</h3><p class="muted small">Se nenhum dia for marcado, os horários ficam como “a confirmar”. Configure os dias para bloquear pedidos fora do expediente.</p><div class="day-grid">'+hours+'</div>'+
  '<div class="form-actions"><button class="btn primary" type="submit">Salvar configurações</button></div></form>';
 }
