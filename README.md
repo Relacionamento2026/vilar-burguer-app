@@ -53,6 +53,18 @@ Aplicação responsiva com cardápio editável, personalização, carrinho, gest
 - `tests/smoke.mjs`: verificações automáticas de sintaxe e controles principais.
 - `render.yaml`: publicação estática multipágina.
 
+## Pedidos de teste, relatórios e autonomia do contratante
+
+- O painel possui a aba **🧪 Pedidos de teste**, acessível somente a administradores autenticados.
+- A criação de pedidos simulados consulta produtos e preços atuais, sem gerar Pix e sem acionar WhatsApp.
+- Os pedidos simulados ficam em `demo_orders` e `demo_order_events`, separados dos pedidos e eventos comerciais.
+- A página de acompanhamento aceita `?demo_token=UUID`, identificando claramente o pedido como **TESTE — SEM PAGAMENTO REAL**.
+- É possível avançar as etapas, copiar o link e excluir testes. As transições são validadas no PostgreSQL.
+- O dashboard usa `vilar_daily_sales` para mostrar, por dia em São Paulo, confirmações de pagamento, entregas e faturamento real. O ticket médio usa somente vendas reais entregues.
+- Em **Configurações**, o administrador pode trocar a própria senha após confirmar a senha atual, usando Supabase Auth.
+- A edição de fotos continua disponível pelo painel (JPEG/PNG/WebP, até 5 MB), com armazenamento Supabase separado.
+- **Vencimento contratual informado:** 25/11/2026, R$ 350. Registrado em `platform_contract` apenas para controle. **Aviso e suspensão automática estão desativados**, até confirmação da natureza da cobrança, cláusula contratual e forma de reativação. Nenhum bloqueio de dados ou pedidos existentes foi configurado.
+
 ## Habilitação do Pix (fase futura, depende do proprietário)
 
 1. Definir a conta de recebimento e provedor (por exemplo, Mercado Pago ou Asaas).
