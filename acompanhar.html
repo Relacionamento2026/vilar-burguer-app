@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17110e"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+<title>Acompanhe seu pedido | Vilar Burguer</title>
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<style>
+:root{color-scheme:dark;--bg:#120e0b;--panel:#211914;--panel2:#2d211a;--line:#604735;--yellow:#ffcb42;--text:#fff3e5;--muted:#bfae9d;--green:#78d8a0;--red:#ff9989}
+*{box-sizing:border-box}html{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;min-height:100vh;color:var(--text);background:radial-gradient(ellipse 900px 440px at 50% -110px,#61402655,transparent 75%),var(--bg)}button,a{font:inherit}a{color:var(--yellow)}button{cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+header{border-bottom:1px solid #463427;background:#1b1410b8;backdrop-filter:blur(12px)}.wrap{width:min(100% - 40px,850px);margin-inline:auto}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px}.brand{text-decoration:none;font-weight:950;letter-spacing:.6px;color:var(--text);font-size:19px}.brand span{color:var(--yellow)}.back{text-decoration:none;font-size:13px;font-weight:700;color:#dfccbc}
+main{padding:36px 0 80px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--yellow)}h1{font-size:clamp(30px,5vw,48px);line-height:1.08;margin:9px 0 14px;letter-spacing:-1.4px}.lead{color:var(--muted);font-size:15px;line-height:1.65;margin:0 0 25px;max-width:620px}.panel{border:1px solid var(--line);border-radius:22px;background:linear-gradient(155deg,#2c211a,#1c1511 78%);padding:clamp(19px,4vw,30px);box-shadow:0 16px 50px #0005;margin-top:20px}.order-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.muted{color:var(--muted)}.small{font-size:12px}.order-id{font-size:24px;font-weight:850;margin:5px 0}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #4f865e;color:#a2f2b8;background:#20392a;border-radius:100px;padding:7px 12px;font-size:12px;font-weight:800}.pill.wait{border-color:#886c3a;background:#3a2c18;color:#ffe1a1}.pill.danger{border-color:#a04f49;background:#3d211d;color:#ffc4ba}.timeline{list-style:none;padding:0;margin:22px 0 0}.timeline li{position:relative;display:grid;grid-template-columns:44px 1fr;gap:12px;min-height:94px}.timeline li:last-child{min-height:58px}.timeline li:not(:last-child):before{content:"";position:absolute;left:19px;top:39px;bottom:-1px;width:2px;background:#614936}.timeline li.done:not(:last-child):before{background:#67ba85}.dot{width:40px;height:40px;border:2px solid #6b5442;border-radius:50%;display:grid;place-items:center;background:#2c211a;color:#c7b3a2;font-weight:900;font-size:18px}.done .dot{background:#254c34;color:#a2f2b8;border-color:#62b47f}.current .dot{box-shadow:0 0 0 5px #f8c34919;border-color:var(--yellow);color:var(--yellow)}.step-title{font-size:16px;font-weight:800;margin:0 0 4px}.step-desc{font-size:13px;line-height:1.55;color:var(--muted);margin:0}.step-time{font-size:12px;color:#d6c4b3;margin-top:5px}.info{display:flex;gap:12px;align-items:flex-start;background:#37291d;border:1px solid #755838;padding:14px 16px;border-radius:13px;color:#f5dfc5;line-height:1.5;font-size:13px}.info strong{color:var(--yellow)}.info span{font-size:20px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.btn{border:1px solid #78604b;background:#31241b;color:var(--text);padding:12px 17px;border-radius:11px;font-size:13px;font-weight:800;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px}.btn.primary{background:var(--yellow);color:#1c130a;border-color:var(--yellow)}.btn:disabled{opacity:.5;cursor:wait}.meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:20px;color:var(--muted);font-size:12px}.empty{padding:30px 0;text-align:center}.empty-icon{font-size:43px;margin-bottom:15px}.hidden{display:none!important}footer{padding:0 0 35px;text-align:center;color:var(--muted);font-size:12px}.demo{display:inline-flex;align-items:center;gap:7px;background:#503b1b;border:1px solid #b88832;border-radius:8px;padding:7px 10px;font-size:12px;color:#ffda87;margin-bottom:14px;font-weight:800}
+@media(max-width:560px){.wrap{width:calc(100% - 28px)}main{padding:25px 0 55px}.top{min-height:64px}.brand{font-size:16px}.back{font-size:12px}.panel{border-radius:17px}.order-id{font-size:21px}.actions .btn{flex:1}.timeline li{grid-template-columns:40px 1fr;gap:10px}.step-title{font-size:14px}.timeline li:not(:last-child):before{left:19px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header><div class="wrap top"><a class="brand" href="./">🍔 VILAR <span>BURGUER</span></a><a class="back" href="./">← Voltar ao cardápio</a></div></header>
+<main class="wrap">
+<div class="eyebrow">Delivery Vilar Burguer</div><h1>Seu pedido, passo a passo.</h1>
+<p class="lead">Acompanhe a confirmação do pagamento e o preparo até a entrega. As atualizações aparecem automaticamente nesta página.</p>
+<div id="demoLabel" class="demo hidden">◈ PRÉVIA ILUSTRATIVA — NÃO É UM PEDIDO REAL</div>
+<section class="panel" aria-label="Acompanhamento do pedido">
+ <div id="loading" class="empty" role="status">Consultando o pedido...</div>
+ <div id="errorState" class="empty hidden" role="alert"><div class="empty-icon">🔎</div><h2 id="errorTitle">Não foi possível encontrar o pedido</h2><p id="errorMessage" class="muted">Confira o link recebido.</p><button type="button" id="retry" class="btn primary">Tentar novamente</button></div>
+ <div id="orderView" class="hidden">
+  <div class="order-head"><div><div class="muted small">Identificação do pedido</div><div class="order-id" id="orderCode">#—</div><div class="muted small" id="createdAt"></div></div><div id="paymentPill" class="pill wait">⏳ Aguardando Pix</div></div>
+  <div id="statusInfo" class="info" style="margin-top:24px"><span aria-hidden="true">🛵</span><div id="statusText"></div></div>
+  <ol id="timeline" class="timeline" aria-label="Etapas do pedido"></ol>
+  <div class="actions"><button class="btn primary" type="button" id="refresh">↻ Atualizar agora</button><button class="btn" type="button" id="share">⤴ Compartilhar link</button><a class="btn" href="./">🍔 Ver cardápio</a></div>
+  <div class="meta"><span id="updatedAt" aria-live="polite">Atualizando...</span><span>Atualização automática a cada 10 segundos</span></div>
+ </div>
+</section>
+<div class="panel"><strong>Precisa de ajuda?</strong><p class="muted small">Entre em contato com a loja para esclarecer dúvidas. A confirmação de pedidos depende exclusivamente da aprovação do pagamento Pix pela plataforma.</p><a class="btn" href="https://wa.me/5511946372832?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20um%20pedido." target="_blank" rel="noopener noreferrer">Conversar com a loja ↗</a></div>
+</main>
+<footer>Vilar Burguer • Seu link é individual. Evite compartilhá-lo publicamente.</footer>
+<script src="./config.js"></script>
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s),token=new URLSearchParams(location.search).get("token"),demo=new URLSearchParams(location.search).get("demo")==="1";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=t=>t?new Date(t).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short",timeZone:"America/Sao_Paulo"}):"";
+const stages=[["received","Pedido confirmado","Pagamento aprovado e pedido recebido pela loja."],["preparing","Em preparação","A cozinha está preparando seu pedido."],["dispatched","Saiu para entrega","Seu pedido está a caminho do endereço informado."],["delivered","Pedido entregue","Entrega finalizada. Bom apetite!"]];
+const demoData={order_code:"VB-EXEMPLO",status:"preparing",payment_status:"paid",created_at:new Date(Date.now()-21*60000).toISOString(),paid_at:new Date(Date.now()-20*60000).toISOString(),updated_at:new Date(Date.now()-3*60000).toISOString(),events:[{status:"received",at:new Date(Date.now()-20*60000).toISOString()},{status:"preparing",at:new Date(Date.now()-3*60000).toISOString()}]};
+let last=null,busy=false;
+function error(title,message){$("#loading").classList.add("hidden");$("#orderView").classList.add("hidden");$("#errorState").classList.remove("hidden");$("#errorTitle").textContent=title;$("#errorMessage").textContent=message;}
+function render(o){
+ last=o;$("#loading").classList.add("hidden");$("#errorState").classList.add("hidden");$("#orderView").classList.remove("hidden");
+ $("#orderCode").textContent="#"+o.order_code;$("#createdAt").textContent="Criado em "+fmt(o.created_at);
+ const paid=o.payment_status==="paid"||o.payment_status==="refunded",cancelled=o.status==="cancelled",refunded=o.payment_status==="refunded";
+ $("#paymentPill").className="pill"+(cancelled||refunded?" danger":paid?"":" wait");
+ $("#paymentPill").textContent=refunded?"↩ Pagamento estornado":paid?"✓ Pagamento Pix aprovado":"⏳ Pagamento pendente";
+ const index=stages.findIndex(s=>s[0]===o.status);
+ let notice=cancelled?"Pedido cancelado. Se houve pagamento, entre em contato com a loja sobre o estorno.":refunded?"Pagamento estornado. Entre em contato com a loja se precisar de ajuda.":!paid?"O pedido ainda não está confirmado. A loja só inicia o preparo após a aprovação automática do Pix.":o.status==="delivered"?"Seu pedido foi entregue. Obrigado pela preferência!":o.status==="dispatched"?"Seu pedido está a caminho. Acompanhe por aqui.":o.status==="preparing"?"Seu pedido está sendo preparado. Em breve teremos novidades.":"Pagamento confirmado! Aguardando o início do preparo.";
+ $("#statusText").textContent=notice;
+ const events=Array.isArray(o.events)?o.events:[];
+ $("#timeline").innerHTML=stages.map(([key,title,desc],i)=>{
+  const done=paid&&index>=i&&!cancelled,active=paid&&index===i&&!cancelled,when=events.find(e=>e.status===key)?.at;
+  return '<li class="'+(done?"done":active?"current":"")+'"><div class="dot" aria-hidden="true">'+(done?"✓":i+1)+'</div><div><p class="step-title">'+esc(title)+'</p><p class="step-desc">'+esc(desc)+'</p>'+(done&&when?'<div class="step-time">✓ '+esc(fmt(when))+'</div>':"")+'</div></li>';
+ }).join("");
+ if(cancelled)$("#timeline").insertAdjacentHTML("beforeend",'<li><div class="dot" aria-hidden="true">×</div><div><p class="step-title">Pedido cancelado</p><p class="step-desc">Entre em contato com a loja para orientações.</p></div></li>');
+ $("#updatedAt").textContent="Última consulta: "+new Date().toLocaleTimeString("pt-BR",{timeZone:"America/Sao_Paulo"});
+}
+async function refresh(){
+ if(busy||demo)return;busy=true;$("#refresh").disabled=true;
+ try{
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+  let response;
+  try{response=await fetch(window.VILAR_CONFIG.url+"/functions/v1/order-status?token="+encodeURIComponent(token),{headers:{apikey:window.VILAR_CONFIG.publishableKey},cache:"no-store",signal:controller.signal});}finally{clearTimeout(timeout);}
+  const data=await response.json();
+  if(!response.ok||!data.ok)throw Error(data.error||"Não foi possível consultar o pedido.");
+  render(data);
+ }catch(err){
+  if(last){$("#updatedAt").textContent="Conexão instável. Tentaremos novamente automaticamente.";}
+  else error("Não foi possível consultar o pedido",err.message||"Tente novamente.");
+ }finally{busy=false;$("#refresh").disabled=false;}
+}
+$("#retry").addEventListener("click",()=>{if(demo)render(demoData);else refresh();});
+$("#refresh").addEventListener("click",refresh);
+$("#share").addEventListener("click",async()=>{
+ try{if(navigator.share){await navigator.share({title:"Acompanhe meu pedido Vilar Burguer",url:location.href});return;}
+ await navigator.clipboard.writeText(location.href);$("#share").textContent="✓ Link copiado";setTimeout(()=>$("#share").textContent="⤴ Compartilhar link",2500);
+ }catch(e){if(e.name!=="AbortError")window.prompt("Copie o link de acompanhamento:",location.href);}
+});
+if(demo){$("#demoLabel").classList.remove("hidden");render(demoData);$("#refresh").disabled=true;$("#refresh").title="Prévia ilustrativa";$("#share").classList.add("hidden");}
+else if(!token||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token))error("Link de acompanhamento necessário","Use o link individual enviado pela hamburgueria após a confirmação do pagamento.");
+else{refresh();setInterval(()=>{if(!document.hidden)refresh();},10000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});window.addEventListener("focus",refresh);}
+})();
+</script>
+</body></html>
