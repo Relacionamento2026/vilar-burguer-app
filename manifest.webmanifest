@@ -1,0 +1,18 @@
+{
+  "name": "Vilar Burguer - Cardápio e Pedidos",
+  "short_name": "Vilar Burguer",
+  "description": "Monte seu pedido e finalize pelo WhatsApp.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#140f0d",
+  "theme_color": "#ffca39",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
