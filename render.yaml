@@ -1,11 +1,17 @@
 services:
   - type: web
-    name: vilar-burguer-pedidos
+    name: vilar-burguer
     runtime: static
-    buildCommand: mkdir -p site && cp index.html site/index.html
+    buildCommand: mkdir -p site && cp *.html *.js *.svg *.webmanifest site/
     staticPublishPath: ./site
     autoDeployTrigger: commit
     headers:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
