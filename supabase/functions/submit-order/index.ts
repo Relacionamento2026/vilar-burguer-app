@@ -50,6 +50,8 @@ Deno.serve(async (req:Request) => {
  if(req.method!=="POST")return reply(405,{error:"Método não permitido."},origin);
  if(!allowed(origin))return reply(403,{error:"Origem não autorizada."},origin);
  if(Number(req.headers.get("content-length")||0)>25000)return reply(413,{error:"Pedido muito grande."},origin);
+ // BLOQUEIO COMERCIAL: sem gateway Pix e webhook de confirmação, nenhum pedido pode ser criado.
+ return reply(503,{error:"Pagamento Pix em configuração. Nenhum pedido foi criado ou confirmado."},origin);
  try{
   const data=await req.json();
   if(!data || typeof data!=="object" || data.website)return reply(400,{error:"Dados inválidos."},origin);
