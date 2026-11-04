@@ -7,6 +7,7 @@
 @media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.day-grid{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:720px){.layout{display:block}.sidebar{height:auto;position:static;padding:12px}.sidebar .logo{padding:4px 6px}.nav{display:flex;overflow-x:auto;gap:4px}.nav button{white-space:nowrap;padding:10px}.side-bottom{display:none}.main{padding:18px 12px}.panel{padding:15px}.cards{gap:8px}.metric{padding:14px}.metric strong{font-size:22px}.grid,.grid.three{grid-template-columns:1fr}.day-grid{grid-template-columns:repeat(2,1fr)}.head h1{font-size:24px}}
 .sales-chart{display:grid;gap:9px;margin:18px 0 25px}.sales-row{display:grid;grid-template-columns:48px minmax(0,1fr) 95px;gap:12px;align-items:center;font-size:12px}.sales-row b{text-align:right;font-size:12px}.sales-track{height:15px;background:#38281e;border-radius:7px;overflow:hidden}.sales-fill{height:100%;background:linear-gradient(90deg,#f09b32,#ffcc45);border-radius:7px}.btn.danger{color:#ffb6a6;border-color:#a14e42}.sales-row span{color:var(--muted)}@media(max-width:500px){.sales-row{grid-template-columns:40px minmax(0,1fr) 85px;gap:7px}}
+.contract-banner{border:2px solid #dca344;border-radius:16px;padding:18px 20px;margin:0 0 18px;background:#382816;color:#fff5e9;box-shadow:0 10px 35px #0003}.contract-banner strong{font-size:17px;color:#ffd77b}.contract-banner p{font-size:14px;line-height:1.6;margin:8px 0}.contract-banner small{display:block;color:#f2d9ad;font-size:12px}
 </style></head><body>
 <div id="loginScreen" class="login-wrap"><div class="login-card">
 <div class="logo">🍔 VILAR <span>BURGUER</span></div><h1>Painel do proprietário</h1><p class="muted">Acesso restrito para gerenciar cardápio, entregas e pedidos.</p>
@@ -29,6 +30,7 @@
 <button type="button" data-tab="settings">⚙️ Configurações</button>
 </nav><div class="side-bottom"><p class="small muted" id="accountEmail"></p><button class="btn" id="logoutBtn" type="button">Sair</button></div></aside>
 <main class="main"><header class="head"><div><h1 id="sectionTitle">Visão geral</h1><p class="muted" id="sectionSubtitle">Gestão do Vilar Burguer</p></div><div class="head-actions"><a class="btn" href="./" target="_blank" rel="noopener">Ver cardápio ↗</a><button class="btn" id="refreshBtn" type="button">↻ Atualizar</button><button class="btn" id="mobileLogoutBtn" type="button">Sair</button></div></header>
+<section id="contractBanner" class="contract-banner hidden" role="status" aria-live="polite"></section>
 <div id="adminContent" aria-live="polite"><div class="panel">Carregando dados...</div></div></main></div>
 <dialog id="editDialog" class="dialog"><h2 id="dialogTitle">Editar</h2><form id="editForm"><div id="editFields"></div><div class="form-actions"><button class="btn" id="cancelEdit" type="button">Cancelar</button><button class="btn primary" id="saveEdit" type="submit">Salvar</button></div></form></dialog>
 <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
