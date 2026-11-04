@@ -22,11 +22,17 @@ Deno.serve(async(req:Request)=>{
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token))
    return respond(400,{error:"Link de acompanhamento inválido."},origin);
  try{
-  const found=await query("orders?select=id,order_code,status,payment_status,created_at,updated_at,paid_at&tracking_token=eq."+encodeURIComponent(token)+"&limit=1");
+  const isTest=new URL(req.url).searchParams.get("mode")==="demo";
+  const table=isTest?"demo_orders":"orders";
+  const eventTable=isTest?"demo_order_events":"order_status_events";
+  const columns=isTest?"id,order_code,status,created_at,updated_at":"id,order_code,status,payment_status,created_at,updated_at,paid_at";
+  const found=await query(table+"?select="+columns+"&tracking_token=eq."+encodeURIComponent(token)+"&limit=1");
   if(!found.length)return respond(404,{error:"Pedido não encontrado. Confira o link recebido."},origin);
   const o=found[0];
-  const events=await query("order_status_events?select=status,created_at&order_id=eq."+encodeURIComponent(o.id)+"&order=created_at.asc,id.asc&limit=40");
-  return respond(200,{ok:true,order_code:o.order_code,status:o.status,payment_status:o.payment_status,
-   created_at:o.created_at,updated_at:o.updated_at,paid_at:o.paid_at,events:events.map((e:any)=>({status:e.status,at:e.created_at}))},origin);
+  const events=await query(eventTable+"?select=status,created_at&order_id=eq."+encodeURIComponent(o.id)+"&order=created_at.asc,id.asc&limit=40");
+  return respond(200,{ok:true,is_test:isTest,order_code:o.order_code,status:o.status,
+   payment_status:isTest?"simulated":o.payment_status,
+   created_at:o.created_at,updated_at:o.updated_at,paid_at:isTest?null:o.paid_at,
+   events:events.map((e:any)=>({status:e.status,at:e.created_at}))},origin);
  }catch(err){console.error("order-status",String(err).slice(0,90));return respond(503,{error:"Não foi possível atualizar o acompanhamento. Tente novamente."},origin);}
 });
