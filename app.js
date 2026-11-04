@@ -152,6 +152,16 @@ async function bootstrap(){
   ready=false;products=[];extras=[];showStatus();renderFilters();renderProducts();renderCart();toast("Não foi possível atualizar o cardápio. Tente novamente.");
  }
 }
+
+function upgradeCheckout(){
+ const phone=$("#clientPhone");phone.required=true;phone.closest(".field").querySelector("label").innerHTML='Telefone com DDD <span class="required">*</span>';
+ $("#street").closest(".field").insertAdjacentHTML("afterend",'<div class="field"><label for="zip">CEP <span class="required">*</span></label><input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" required></div>');
+ $("#generalNotes").closest(".field").insertAdjacentHTML("beforebegin",'<div class="field"><label for="coupon">Cupom (opcional)</label><input id="coupon" name="coupon" maxlength="24" autocomplete="off" placeholder="Código promocional"><p class="checkout-info">O desconto será validado antes de abrir o WhatsApp.</p></div>');
+ $("#generalNotes").closest(".field").insertAdjacentHTML("afterend",'<div class="field"><label class="privacy-label"><input type="checkbox" id="privacyConsent" name="privacyConsent" required> Concordo com o uso dos meus dados para registrar o pedido e preparar a mensagem para a hamburgueria. <span class="required">*</span></label><p class="checkout-info">Consulte a <a href="./privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. A mensagem só será enviada quando você confirmar no WhatsApp.</p></div>');
+ const delivery=$(".delivery-note");delivery.id="deliveryNote";delivery.insertAdjacentHTML("afterend",'<div class="checkout-total"><span>Total estimado</span><strong id="grandTotal">A confirmar</strong></div><div class="checkout-info" id="checkoutInfo">Taxa de entrega a confirmar.</div>');
+ $("#sendOrder").disabled=true;$("#sendOrder").textContent="💬 Preparar pedido no WhatsApp";
+}
+upgradeCheckout();
 $("#filters").addEventListener("click",e=>{const el=e.target.closest("[data-cat]");if(!el)return;activeCategory=el.dataset.cat;renderFilters();renderProducts();});
 $("#search").addEventListener("input",renderProducts);
 $("#catalog").addEventListener("click",e=>{const el=e.target.closest("[data-add]");if(el)openProduct(el.dataset.add);});
