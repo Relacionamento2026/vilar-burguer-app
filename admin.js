@@ -86,7 +86,7 @@ function dashboard(){
   const value=Number(x.revenue_cents)||0;
   return '<div class="sales-row"><span>'+esc(x.day.slice(8,10)+"/"+x.day.slice(5,7))+'</span><div class="sales-track"><div class="sales-fill" style="width:'+Math.round(value/max*100)+'%"></div></div><b>'+money(value)+'</b></div>';
  }).join("")+'</div>':'<p class="muted">Sem dados de vendas.</p>';
- return '<div class="cards">'+[
+ return contractNotice()+'<div class="cards">'+[
   ["Pedidos pagos hoje",today.confirmed_count,"Confirmações Pix reais"],
   ["Entregues hoje",today.delivered_count,"Pedidos pagos e entregues"],
   ["Faturamento hoje",money(revenue),"Apenas vendas reais entregues"],
@@ -329,11 +329,16 @@ function settings(){
  '<div class="field"><label for="confirmPassword">Confirme a nova senha</label><input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password" minlength="10" required></div></div></form>'+
  contractInfo();
 }
+function contractNotice(){
+ const c=state.data.platform_contract?.[0];
+ if(!c?.notice_enabled||c.payment_confirmed_at||todaySP()<c.due_date)return "";
+ return '<div class="alert" role="status"><b>Vencimento contratual:</b> existe uma cobrança informada de '+money(c.amount_cents)+' com vencimento em '+esc(c.due_date.split("-").reverse().join("/"))+'. Consulte o responsável pelo contrato para regularização. O painel e os dados continuam acessíveis.</div>';
+}
 function contractInfo(){
  const c=state.data.platform_contract?.[0];
  if(!c)return '';
  return '<div class="panel"><h2>Vencimento contratual</h2><p><b>Data informada:</b> '+esc(c.due_date.split("-").reverse().join("/"))+' • <b>Valor informado:</b> '+money(c.amount_cents)+'</p>'+
- '<div class="alert"><b>Suspensão automática desativada.</b> A data está registrada para controle, mas a natureza da cobrança e as condições contratuais ainda precisam ser confirmadas. Não há bloqueio do painel, dos dados ou do acompanhamento de pedidos.</div></div>';
+ '<div class="alert"><b>Aviso programado para a data de vencimento.</b> A cobrança está registrada para controle, mas a natureza do serviço e as condições contratuais ainda precisam ser confirmadas. <b>Suspensão automática desativada.</b> O painel, os dados e o acompanhamento continuam acessíveis.</div></div>';
 }
 async function changePassword(e){
  e.preventDefault();
