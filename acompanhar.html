@@ -38,7 +38,7 @@ main{padding:36px 0 80px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:
 <script>
 (()=>{
 "use strict";
-const $=s=>document.querySelector(s),token=new URLSearchParams(location.search).get("token"),demo=new URLSearchParams(location.search).get("demo")==="1";
+const $=s=>document.querySelector(s),demoOrderToken=new URLSearchParams(location.search).get("demo_token"),token=demoOrderToken||new URLSearchParams(location.search).get("token"),demo=new URLSearchParams(location.search).get("demo")==="1";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=t=>t?new Date(t).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short",timeZone:"America/Sao_Paulo"}):"";
 const stages=[["received","Pedido confirmado","Pagamento aprovado e pedido recebido pela loja."],["preparing","Em preparação","A cozinha está preparando seu pedido."],["dispatched","Saiu para entrega","Seu pedido está a caminho do endereço informado."],["delivered","Pedido entregue","Entrega finalizada. Bom apetite!"]];
@@ -48,12 +48,12 @@ function error(title,message){$("#loading").classList.add("hidden");$("#orderVie
 function render(o){
  last=o;$("#loading").classList.add("hidden");$("#errorState").classList.add("hidden");$("#orderView").classList.remove("hidden");
  $("#orderCode").textContent="#"+o.order_code;$("#createdAt").textContent="Criado em "+fmt(o.created_at);
- const paid=o.payment_status==="paid"||o.payment_status==="refunded",cancelled=o.status==="cancelled",refunded=o.payment_status==="refunded";
+ const isTest=o.is_test===true,paid=isTest||o.payment_status==="paid"||o.payment_status==="refunded",cancelled=o.status==="cancelled",refunded=o.payment_status==="refunded";
  $("#paymentPill").className="pill"+(cancelled||refunded?" danger":paid?"":" wait");
- $("#paymentPill").textContent=refunded?"↩ Pagamento estornado":paid?"✓ Pagamento Pix aprovado":"⏳ Pagamento pendente";
+ $("#paymentPill").textContent=isTest?"🧪 Pagamento simulado":refunded?"↩ Pagamento estornado":paid?"✓ Pagamento Pix aprovado":"⏳ Pagamento pendente";
  const index=stages.findIndex(s=>s[0]===o.status);
  let notice=cancelled?"Pedido cancelado. Se houve pagamento, entre em contato com a loja sobre o estorno.":refunded?"Pagamento estornado. Entre em contato com a loja se precisar de ajuda.":!paid?"O pedido ainda não está confirmado. A loja só inicia o preparo após a aprovação automática do Pix.":o.status==="delivered"?"Seu pedido foi entregue. Obrigado pela preferência!":o.status==="dispatched"?"Seu pedido está a caminho. Acompanhe por aqui.":o.status==="preparing"?"Seu pedido está sendo preparado. Em breve teremos novidades.":"Pagamento confirmado! Aguardando o início do preparo.";
- $("#statusText").textContent=notice;
+ $("#statusText").textContent=isTest?"PEDIDO DE TESTE — sem cobrança real. "+notice:notice;
  const events=Array.isArray(o.events)?o.events:[];
  $("#timeline").innerHTML=stages.map(([key,title,desc],i)=>{
   const done=paid&&index>=i&&!cancelled,active=paid&&index===i&&!cancelled,when=events.find(e=>e.status===key)?.at;
@@ -67,7 +67,7 @@ async function refresh(){
  try{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
   let response;
-  try{response=await fetch(window.VILAR_CONFIG.url+"/functions/v1/order-status?token="+encodeURIComponent(token),{headers:{apikey:window.VILAR_CONFIG.publishableKey},cache:"no-store",signal:controller.signal});}finally{clearTimeout(timeout);}
+  try{response=await fetch(window.VILAR_CONFIG.url+"/functions/v1/order-status?token="+encodeURIComponent(token)+(demoOrderToken?"&mode=demo":""),{headers:{apikey:window.VILAR_CONFIG.publishableKey},cache:"no-store",signal:controller.signal});}finally{clearTimeout(timeout);}
   const data=await response.json();
   if(!response.ok||!data.ok)throw Error(data.error||"Não foi possível consultar o pedido.");
   render(data);
@@ -85,7 +85,7 @@ $("#share").addEventListener("click",async()=>{
 });
 if(demo){$("#demoLabel").classList.remove("hidden");render(demoData);$("#refresh").disabled=true;$("#refresh").title="Prévia ilustrativa";$("#share").classList.add("hidden");}
 else if(!token||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token))error("Link de acompanhamento necessário","Use o link individual enviado pela hamburgueria após a confirmação do pagamento.");
-else{refresh();setInterval(()=>{if(!document.hidden)refresh();},10000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});window.addEventListener("focus",refresh);}
+else{if(demoOrderToken)$("#demoLabel").classList.remove("hidden");refresh();setInterval(()=>{if(!document.hidden)refresh();},10000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});window.addEventListener("focus",refresh);}
 })();
 </script>
 </body></html>
