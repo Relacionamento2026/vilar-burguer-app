@@ -357,7 +357,7 @@ function contractInfo(){
  const c=state.data.platform_contract?.[0];
  if(!c)return '';
  return '<div class="panel"><h2>Vencimento contratual</h2><p><b>Data informada:</b> '+esc(c.due_date.split("-").reverse().join("/"))+' • <b>Valor informado:</b> '+money(c.amount_cents)+'</p>'+
- '<div class="alert"><b>Aviso programado para a data de vencimento.</b> A cobrança está registrada para controle, mas a natureza do serviço e as condições contratuais ainda precisam ser confirmadas. <b>Suspensão automática desativada.</b> O painel, os dados e o acompanhamento continuam acessíveis.</div></div>';
+ '<div class="alert"><b>Avisos programados para 24/11/2026 durante todo o dia</b>, com prazo informado até 25/11/2026 às 03h (horário de Brasília). <b>Suspensão automática ainda não ativada.</b> O painel, os dados e o acompanhamento continuam acessíveis até que exista um bloqueio validado no servidor.</div></div>';
 }
 async function changePassword(e){
  e.preventDefault();
@@ -445,6 +445,14 @@ async function refreshOrdersQuietly(){
 }
 setInterval(refreshOrdersQuietly,12000);
 setInterval(contractReminder,60000);
+async function refreshContractQuietly(){
+ if(!state.user||document.hidden)return;
+ const {data,error}=await sb.from("platform_contract").select("id,due_date,amount_cents,notice_enabled,suspension_enabled,payment_confirmed_at").eq("id",1).maybeSingle();
+ if(error||!data)return;
+ state.data.platform_contract=[data];
+ contractReminder();
+}
+setInterval(refreshContractQuietly,300000);
 $("#adminContent").addEventListener("change",e=>{const s=e.target.closest("[data-status]");if(s)changeStatus(s.dataset.status,s.value);
  const d=e.target.closest("[data-demo-status]");if(d)changeDemoStatus(d.dataset.demoStatus,d.value);if(e.target.id==="orderFilter"){const v=e.target.value;$("#ordersTable").innerHTML=ordersTable((state.data.orders||[]).filter(x=>!v||x.status===v));}});
 $("#adminContent").addEventListener("submit",e=>{if(e.target.id==="settingsForm")saveSettings(e);if(e.target.id==="demoForm")createDemoOrder(e);if(e.target.id==="passwordForm")changePassword(e);});
