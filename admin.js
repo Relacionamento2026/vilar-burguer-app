@@ -18,8 +18,15 @@ function nextStatuses(o){
  return [o.status,...(pos>=0&&pos<workflow.length-1?[workflow[pos+1]]:[]),"cancelled"];
 }
 const trackingUrl=o=>o.tracking_token?new URL("./acompanhar.html?token="+encodeURIComponent(o.tracking_token),location.href).href:"";
+const demoTrackingUrl=o=>o.tracking_token?new URL("./acompanhar.html?demo_token="+encodeURIComponent(o.tracking_token),location.href).href:"";
+const todaySP=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+function nextDemoStatuses(o){
+ if(o.status==="delivered"||o.status==="cancelled")return [o.status];
+ const i=workflow.indexOf(o.status);
+ return [o.status,...(i>=0&&i<workflow.length-1?[workflow[i+1]]:[]),"cancelled"];
+}
 const days=[["mon","Segunda"],["tue","Terça"],["wed","Quarta"],["thu","Quinta"],["fri","Sexta"],["sat","Sábado"],["sun","Domingo"]];
-const names={dashboard:"Visão geral",orders:"Pedidos",products:"Produtos",extras:"Adicionais",categories:"Categorias",delivery_zones:"Taxas de entrega",coupons:"Cupons",settings:"Configurações"};
+const names={dashboard:"Visão geral",orders:"Pedidos",demo_orders:"Pedidos de teste",products:"Produtos",extras:"Adicionais",categories:"Categorias",delivery_zones:"Taxas de entrega",coupons:"Cupons",settings:"Configurações"};
 const sb=window.supabase?.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true}});
 let state={tab:"dashboard",data:{},user:null},editContext=null;
 function toast(message,err=false){const el=$("#toast");el.textContent=message;el.style.borderColor=err?"#ef7d68":"#d2a14b";el.classList.remove("hidden");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.add("hidden"),3800);}
@@ -41,7 +48,7 @@ async function authenticate(){
 }
 async function loadAll(){
  $("#adminContent").innerHTML='<div class="panel">Atualizando informações...</div>';
- const tables=["categories","products","extras","delivery_zones","store_settings","orders","coupons"];
+ const tables=["categories","products","extras","delivery_zones","store_settings","orders","coupons","demo_orders","platform_contract"];
  try{
   const results=await Promise.all(tables.map(async t=>{
    let q=sb.from(t).select("*");
@@ -50,7 +57,11 @@ async function loadAll(){
    else if(t==="delivery_zones")q=q.order("name",{ascending:true});
    const {data,error}=await q;if(error)throw new Error(t+": "+error.message);return [t,data||[]];
   }));
-  state.data=Object.fromEntries(results);render();
+  state.data=Object.fromEntries(results);
+  const {data:daily,error:dailyError}=await sb.rpc("vilar_daily_sales",{p_days:14});
+  state.data.daily_sales=dailyError?[]:(daily||[]);
+  if(dailyError)console.warn("Relatório diário indisponível.");
+  render();
  }catch(err){$("#adminContent").innerHTML='<div class="panel error">'+esc(errorText(err))+'<p>Verifique sua conexão e suas permissões.</p></div>';toast("Erro ao atualizar dados.",true);}
 }
 function selectTab(tab){state.tab=tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));render();}
@@ -59,25 +70,37 @@ function render(){
  const root=$("#adminContent");
  if(tab==="dashboard")root.innerHTML=dashboard();
  else if(tab==="orders")root.innerHTML=orders();
+ else if(tab==="demo_orders")root.innerHTML=demoOrders();
  else if(tab==="settings")root.innerHTML=settings();
  else root.innerHTML=listing(tab);
 }
 function dashboard(){
- const d=state.data,orders=d.orders||[];
- const pending=orders.filter(x=>x.payment_status!=="paid"&&x.status!=="cancelled").length;
- const active=(d.products||[]).filter(x=>x.active).length;
+ const d=state.data,orders=d.orders||[],daily=d.daily_sales||[];
+ const today=daily.find(x=>x.day===todaySP())||{confirmed_count:0,delivered_count:0,revenue_cents:0};
  const confirmed=orders.filter(x=>x.payment_status==="paid"&&workflow.includes(x.status)).length;
- const delivered=orders.filter(x=>x.status==="delivered"&&x.payment_status==="paid"&&x.total_cents!==null);
- const sales=delivered.reduce((sum,x)=>sum+x.total_cents,0);
+ const active=(d.products||[]).filter(x=>x.active).length;
+ const revenue=Number(today.revenue_cents)||0,delivered=Number(today.delivered_count)||0;
+ const avg=delivered?Math.round(revenue/delivered):0;
+ const max=Math.max(1,...daily.map(x=>Number(x.revenue_cents)||0));
+ const chart=daily.length?'<div class="sales-chart">'+daily.map(x=>{
+  const value=Number(x.revenue_cents)||0;
+  return '<div class="sales-row"><span>'+esc(x.day.slice(8,10)+"/"+x.day.slice(5,7))+'</span><div class="sales-track"><div class="sales-fill" style="width:'+Math.round(value/max*100)+'%"></div></div><b>'+money(value)+'</b></div>';
+ }).join("")+'</div>':'<p class="muted">Sem dados de vendas.</p>';
  return '<div class="cards">'+[
-  ["Aguardando pagamento",pending,"Não liberados para preparo"],
-  ["Pedidos pagos",confirmed,"Liberados após aprovação do Pix"],
+  ["Pedidos pagos hoje",today.confirmed_count,"Confirmações Pix reais"],
+  ["Entregues hoje",today.delivered_count,"Pedidos pagos e entregues"],
+  ["Faturamento hoje",money(revenue),"Apenas vendas reais entregues"],
+  ["Ticket médio hoje",money(avg),"Vendas entregues"],
+  ["Pedidos em andamento",confirmed,"Pedidos reais já pagos"],
   ["Produtos disponíveis",active,"Visíveis no cardápio"],
-  ["Vendas entregues",money(sales),"Apenas pedidos pagos e entregues"]
+  ["Pedidos de teste",(d.demo_orders||[]).length,"Não entram no faturamento"],
+  ["Pix real","Em configuração","Checkout bloqueado"]
  ].map(x=>'<div class="metric"><small>'+esc(x[0])+'</small><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join("")+'</div>'+
- '<div class="alert"><b>🔒 Pagamento antecipado obrigatório.</b> O checkout está temporariamente bloqueado até a integração Pix. Nenhum pedido pode ser enviado para preparo sem aprovação do pagamento pelo provedor.</div>'+
- '<div class="panel"><div class="panel-head"><h2>Pedidos recentes</h2><button class="btn" data-goto="orders">Ver todos</button></div>'+ordersTable(orders.slice(0,7))+'</div>'+
- '<div class="panel"><h2>Operação e acompanhamento</h2><p>O painel permite atualizar o andamento dos pedidos pagos e compartilhar o link individual com o cliente. O cliente acompanha pelo link, atualizado a cada 10 segundos.</p><div class="toolbar"><a class="btn" href="./acompanhar.html?demo=1" target="_blank" rel="noopener">Visualizar acompanhamento de exemplo ↗</a><button class="btn primary" data-goto="settings">Configurar loja</button></div></div>';
+ '<div class="alert"><b>🔒 Pix antecipado obrigatório.</b> Os pedidos reais continuam bloqueados até a integração do provedor. Use <b>Pedidos de teste</b> para simular todo o fluxo sem cobrança.</div>'+
+ '<div class="panel"><div class="panel-head"><div><h2>Vendas diárias — últimos 14 dias</h2><p class="small muted">Agrupadas pela data de entrega em São Paulo. Pedidos de teste e cancelados não entram na receita.</p></div></div>'+chart+
+ '<div class="table-wrap"><table class="data-table"><thead><tr><th>Dia</th><th>Pagamentos confirmados</th><th>Pedidos entregues</th><th>Faturamento</th></tr></thead><tbody>'+daily.slice().reverse().map(x=>'<tr><td>'+esc(x.day.slice(8,10)+"/"+x.day.slice(5,7))+'</td><td>'+esc(x.confirmed_count)+'</td><td>'+esc(x.delivered_count)+'</td><td>'+money(x.revenue_cents)+'</td></tr>').join("")+'</tbody></table></div></div>'+
+ '<div class="panel"><div class="panel-head"><h2>Pedidos reais recentes</h2><button class="btn" data-goto="orders">Ver todos</button></div>'+ordersTable(orders.slice(0,7))+'</div>'+
+ '<div class="panel"><h2>Simulação da operação</h2><p>Crie pedidos de teste com produtos reais do cardápio, avance as etapas e acompanhe o link em tempo real. Nenhuma cobrança Pix ou mensagem é enviada.</p><div class="toolbar"><button class="btn primary" data-goto="demo_orders">Criar pedido de teste</button><a class="btn" href="./acompanhar.html?demo=1" target="_blank" rel="noopener">Prévia do acompanhamento ↗</a></div></div>';
 }
 function ordersTable(rows){
  if(!rows.length)return '<div class="empty">Nenhum pedido registrado ainda.</div>';
