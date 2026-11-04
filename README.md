@@ -1,80 +1,74 @@
-# Vilar Burguer — Cardápio digital e pedidos
+# Vilar Burguer — Cardápio, Pix antecipado e acompanhamento
 
-Plataforma estática responsiva para cardápio, personalização, carrinho, checkout e abertura do WhatsApp, com **painel administrativo** e banco independente.
+Aplicação responsiva com cardápio editável, personalização, carrinho, gestão de pedidos e acompanhamento individual.
 
-## Links
+**Situação atual (novembro de 2026):** o cardápio e o carrinho estão disponíveis. **O checkout está bloqueado** enquanto não houver uma conta Pix com integração automática. Nenhum pedido pode ser liberado para preparo antes da confirmação de pagamento pelo provedor.
 
-- **Cardápio:** https://vilar-burguer.onrender.com/
-- **Painel:** https://vilar-burguer.onrender.com/admin.html
-- **Privacidade:** https://vilar-burguer.onrender.com/privacidade.html
-- **Link antigo:** https://vilar-burguer-pedidos.onrender.com/ (redireciona para o novo)
-- **Supabase:** projeto `Vilar Burguer - Pedidos`, referência `dlreaviyprmgdumwwpcp`, região `sa-east-1`
+## Endereços
 
-## Como funciona
+- Cardápio: https://vilar-burguer.onrender.com/
+- Administração: https://vilar-burguer.onrender.com/admin.html
+- Acompanhamento: https://vilar-burguer.onrender.com/acompanhar.html
+- **Prévia ilustrativa do acompanhamento:** https://vilar-burguer.onrender.com/acompanhar.html?demo=1
+- Privacidade: https://vilar-burguer.onrender.com/privacidade.html
+- Link antigo: https://vilar-burguer-pedidos.onrender.com/ (redirecionamento)
+- Supabase independente: `dlreaviyprmgdumwwpcp` (`Vilar Burguer - Pedidos`)
 
-1. O cardápio consulta produtos, adicionais, categorias, taxas e configurações no Supabase, por meio de chave **publicável**.
-2. O cliente escolhe produtos e adicionais. O carrinho é salvo apenas no navegador.
-3. O checkout valida dados e chama a Edge Function `submit-order`. **Todos os preços e descontos são recalculados no servidor**, nunca confiados ao navegador.
-4. A solicitação é registrada como `whatsapp_pending` e o WhatsApp abre com o resumo. **Não é possível comprovar automaticamente que a mensagem foi enviada**.
-5. A equipe confere a conversa recebida e altera o status para `received` no painel.
+## Fluxo operacional planejado
 
-Pedidos sem taxa cadastrada exibem valor final **a confirmar**. Horários e bairros ainda não confirmados devem ser configurados pelo proprietário antes de divulgar a loja.
+1. Cliente monta carrinho e informa endereço.
+2. Backend calcula preço, adicionais, descontos e taxa. **Taxa desconhecida impede a cobrança**, pois o Pix deve ter valor final definido.
+3. Provedor gera QR Code Pix dinâmico e código Copia e Cola.
+4. O pagamento é confirmado **somente via API/webhook autenticado do provedor**. Print ou comprovante enviado não substitui a confirmação.
+5. O backend registra `payment_status='paid'`, `paid_at`, `provider_payment_id` e libera `status='received'` de forma idempotente.
+6. O pedido entra na fila da cozinha; cliente recebe um link individual de acompanhamento.
+7. Equipe atualiza `received → preparing → dispatched → delivered` no painel. Cliente vê as mudanças no link, com consulta a cada 10 segundos.
+8. Equipe pode compartilhar o status pelo WhatsApp com mensagem pré-preenchida; **o envio é manual**. Automação requer WhatsApp Business Platform/API.
+
+**Não existe pagamento Pix real nesta versão.** O botão de finalizar está desabilitado no frontend e a função `submit-order` retorna HTTP 503, mesmo que alguém tente chamá-la diretamente. A flag `payment_gateway_ready` está bloqueada para alterações pelo painel e a configuração comercial está com `accepting_orders=false`.
+
+## Gestão e segurança
+
+- Supabase Auth + tabela `admin_users` definem o acesso à administração. Contas recém-criadas não ganham permissão automaticamente.
+- `orders` armazena `payment_status`, `paid_at`, `provider_payment_id` e `tracking_token` aleatório (UUID).
+- Restrições e gatilhos PostgreSQL impedem marcar pedidos como recebidos/em preparo/em rota/entregues sem pagamento aprovado e referência do provedor.
+- Administradores podem mudar **apenas o status operacional**, seguindo transições permitidas; não podem editar valores, dados do pagamento ou marcar um Pix como pago.
+- `order_status_events` registra o histórico das etapas. Apenas administradores podem consultar o histórico diretamente; inserções são feitas por trigger.
+- `order-status` é uma Edge Function que recebe o token individual e devolve **apenas código, situação do pagamento, status e horários**. Não expõe nome, telefone, endereço ou itens.
+- O link individual deve ser tratado como privado. A página usa `noindex`, `no-referrer` e `Cache-Control: no-store`.
+- O acompanhamento consulta a API a cada 10 segundos com a página visível; não é push via WhatsApp.
+- Vendas no painel somam somente pedidos pagos e entregues.
+- O cliente não fornece dados de cartão ao site.
 
 ## Arquivos
 
-- `index.html` — layout, estilos e imagens ilustrativas temporárias.
-- `app.js` — catálogo, carrinho, validação e integração com a Edge Function.
-- `admin.html` e `admin.js` — gestão autenticada de produtos, adicionais, categorias, bairros, cupons, horários, pagamentos, pedidos e relatórios.
-- `config.js` — URL do projeto e **chave publicável**; nunca inserir chaves secretas.
-- `privacidade.html` — aviso de privacidade.
-- `manifest.webmanifest`, `sw.js`, `icon.svg` — recursos PWA.
-- `supabase/functions/submit-order/index.ts` — fonte da Edge Function.
+- `index.html`: interface do cardápio e imagens ilustrativas.
+- `app.js`: carrinho e estado do checkout Pix bloqueado.
+- `admin.html` e `admin.js`: administração e compartilhamento de andamento.
+- `acompanhar.html`: rastreamento individual e prévia de demonstração.
+- `config.js`: chave publicável (nunca inserir chaves secretas).
+- `privacidade.html`: aviso sobre dados pessoais e links de acompanhamento.
+- `supabase/functions/submit-order/index.ts`: endpoint **bloqueado** até a integração Pix.
+- `supabase/functions/order-status/index.ts`: endpoint de consulta por token.
+- `tests/smoke.mjs`: verificações automáticas de sintaxe e controles principais.
+- `render.yaml`: publicação estática multipágina.
 
-## Primeiro acesso administrativo
+## Habilitação do Pix (fase futura, depende do proprietário)
 
-1. Abra `/admin.html`, informe e-mail e senha e clique em **Criar minha conta**.
-2. Confirme o e-mail, se solicitado pelo Supabase.
-3. O responsável técnico deve localizar o usuário em **Supabase > Authentication > Users** e liberar seu UUID na tabela `public.admin_users`, por exemplo:
+1. Definir a conta de recebimento e provedor (por exemplo, Mercado Pago ou Asaas).
+2. Validar titularidade da conta, taxas, prazo de liquidação e modalidade Pix dinâmico com webhook.
+3. Configurar credenciais **somente no backend** (Secrets do Supabase), nunca no HTML ou GitHub.
+4. Implementar criação de cobrança, expiração, conciliação e verificação de autenticidade de webhook.
+5. Testar cenários: pagamento aprovado, pendente, expirado, cancelado, reembolso, pagamento duplicado, taxa de entrega e cupom.
+6. Publicar o fluxo de pagamento com QR Code e Copia e Cola, redirecionamento para acompanhamento e liberação de WhatsApp **apenas após confirmação**.
+7. Habilitar `payment_gateway_ready` somente após homologação e, depois, `accepting_orders`.
 
-   ```sql
-   insert into public.admin_users (user_id,role)
-   values ('UUID_REAL_DO_USUARIO','owner');
-   ```
+## Configuração da loja
 
-4. Depois, use **Entrar no painel**. Apenas contas explicitamente cadastradas em `admin_users` podem administrar o site.
+No painel, revisar produtos, bairros atendidos, taxas, horários e contato comercial. A opção de aceitar novos pedidos permanece bloqueada até a integração Pix. As fotos são ilustrativas até a entrega das imagens reais.
 
-**Nunca habilite cadastro administrativo automático baseado apenas no e-mail digitado pelo usuário.**
+Para o primeiro administrador: criar conta em `/admin.html`, confirmar e-mail se solicitado e cadastrar o UUID em `public.admin_users` como `owner` por meio de um responsável autorizado. Nunca conceder acesso automaticamente apenas pelo e-mail informado.
 
-## Configuração comercial
+## Implantação e limitações
 
-Antes do lançamento: revisar preços e descrições, cadastrar bairros/cidades e taxas, informar horários, confirmar pagamentos e testar pedido completo com o WhatsApp da hamburgueria. As imagens permanecem ilustrativas até a entrega das fotos reais.
-
-## Segurança e privacidade
-
-- Supabase Row Level Security (RLS) habilitado em todas as tabelas públicas.
-- Catálogo e configurações públicas somente para leitura anônima.
-- Pedidos, cupons e edição do cardápio exigem conta administrativa autorizada.
-- Edge Function recalcula valores e aplica limite básico de tentativas por telefone.
-- Não há captura de dados de cartão nem processamento de pagamento online.
-- Os dados pessoais ficam no banco de pedidos; exportações CSV devem ser tratadas como informações restritas.
-- O projeto deve revisar periodicamente os dados retidos e suas obrigações LGPD.
-
-## Implantação
-
-O site oficial usa o serviço estático Render `vilar-burguer`, que copia os arquivos HTML/JS/SVG/manifest para `site/`. Alterações na branch `main` podem disparar deploy automático; se o webhook não disparar, usar **Deploy latest commit**.
-
-O serviço antigo `vilar-burguer-pedidos` continua ativo apenas para preservar o link histórico e redirecionar para o novo endereço.
-
-## Limitações conhecidas
-
-- **Acesso administrativo:** requer cadastro e liberação de pelo menos um usuário.
-- **Taxas e horários:** dependem de confirmação do proprietário; não há valores fictícios cadastrados.
-- **Pedidos:** registro no site não equivale à confirmação de recebimento no WhatsApp.
-- **Fotos:** placeholders ilustrativos até o envio das fotos reais.
-- **Cupons:** uso contabilizado quando a equipe confirma o pedido.
-- **Testes ponta a ponta:** validar com um pedido de teste em navegador real antes de divulgar comercialmente.
-- **Custos:** criação do projeto Supabase foi cotada a US$ 0/mês; verificar limites gratuitos e eventuais alterações de planos.
-
-## Operação
-
-Os pedidos são exibidos no painel por status. **Pedidos pendentes não devem ser somados às vendas**; a visão de faturamento usa apenas pedidos marcados como entregues. O proprietário pode exportar o histórico em CSV.
+A aplicação é publicada na Render a partir de `main`. O site antigo preserva links históricos. Não foram executados testes com pagamentos reais porque **a conta Pix ainda não foi definida**. O acompanhamento pode ser visualizado em modo demonstração, claramente identificado como não real. Não prometer confirmação de pedido, entrega ou WhatsApp automático enquanto as integrações não estiverem homologadas.
