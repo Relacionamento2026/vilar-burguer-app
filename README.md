@@ -65,6 +65,15 @@ Aplicação responsiva com cardápio editável, personalização, carrinho, gest
 - A edição de fotos continua disponível pelo painel (JPEG/PNG/WebP, até 5 MB), com armazenamento Supabase separado.
 - **Vencimento contratual informado:** 25/11/2026, R$ 350. Registrado em `platform_contract` apenas para controle. **Aviso informativo programado para o painel a partir do vencimento; suspensão automática desativada.** A natureza da cobrança, a cláusula contratual e a forma de reativação ainda precisam ser confirmadas. Nenhum bloqueio de dados ou pedidos existentes foi configurado.
 
+## Avisos de renovação — 24/11/2026
+
+- Durante **todo o dia 24/11/2026**, os administradores autenticados visualizam um aviso persistente em todas as seções do painel, com valor de **R$ 350**, natureza da taxa **Renovação e Manutenção da Plataforma**, e prazo até **25/11/2026 às 03h (horário de Brasília)**.
+- Enquanto a aba estiver aberta e visível, há lembretes discretos a cada intervalo de três horas, além do aviso persistente.
+- O horário é interpretado no fuso `America/Sao_Paulo`, não no fuso local do computador.
+- O aviso depende de `platform_contract.notice_enabled` e desaparece quando `payment_confirmed_at` estiver preenchido; a confirmação é reconsultada periodicamente.
+- **Não existe cobrança Pix automática nem confirmação automática de recebimento para essa taxa.**
+- **O bloqueio geral em 25/11 às 03h ainda não está ativado.** Um bloqueio real precisa de controle no servidor e de procedimento seguro de reativação; não é suficiente ocultar o painel via JavaScript. Nenhum dado ou pedido já registrado deve ser eliminado.
+
 ## Habilitação do Pix (fase futura, depende do proprietário)
 
 1. Definir a conta de recebimento e provedor (por exemplo, Mercado Pago ou Asaas).
