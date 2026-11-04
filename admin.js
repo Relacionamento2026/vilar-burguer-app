@@ -9,7 +9,15 @@ const cents=v=>Math.max(0,Math.round(Number(String(v||"0").replace(",","."))*100
 const reais=v=>(Number(v||0)/100).toFixed(2);
 const slug=v=>String(v||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const safeUrl=u=>/^https:\/\//i.test(u||"")?esc(u):"";
-const statuses={whatsapp_pending:"Aguardando WhatsApp",received:"Recebido",preparing:"Em preparo",dispatched:"Saiu para entrega",delivered:"Entregue",cancelled:"Cancelado"};
+const statuses={awaiting_payment:"Aguardando Pix",whatsapp_pending:"Legado: aguardando WhatsApp",received:"Pedido confirmado",preparing:"Em preparação",dispatched:"Saiu para entrega",delivered:"Entregue",cancelled:"Cancelado"};
+const workflow=["received","preparing","dispatched","delivered"];
+function nextStatuses(o){
+ if(o.status==="cancelled"||o.status==="delivered")return [o.status];
+ if(o.payment_status!=="paid")return [o.status,"cancelled"];
+ const pos=workflow.indexOf(o.status);
+ return [o.status,...(pos>=0&&pos<workflow.length-1?[workflow[pos+1]]:[]),"cancelled"];
+}
+const trackingUrl=o=>o.tracking_token?new URL("./acompanhar.html?token="+encodeURIComponent(o.tracking_token),location.href).href:"";
 const days=[["mon","Segunda"],["tue","Terça"],["wed","Quarta"],["thu","Quinta"],["fri","Sexta"],["sat","Sábado"],["sun","Domingo"]];
 const names={dashboard:"Visão geral",orders:"Pedidos",products:"Produtos",extras:"Adicionais",categories:"Categorias",delivery_zones:"Taxas de entrega",coupons:"Cupons",settings:"Configurações"};
 const sb=window.supabase?.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true}});
@@ -47,7 +55,7 @@ async function loadAll(){
 }
 function selectTab(tab){state.tab=tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));render();}
 function render(){
- const tab=state.tab;$("#sectionTitle").textContent=names[tab];$("#sectionSubtitle").textContent=tab==="orders"?"Pedidos registrados quando o cliente inicia o WhatsApp. Confirme o recebimento manualmente.":"Gestão independente do cardápio e da operação.";
+ const tab=state.tab;$("#sectionTitle").textContent=names[tab];$("#sectionSubtitle").textContent=tab==="orders"?"A cozinha só recebe pedidos com Pix aprovado. Atualize as etapas para informar o cliente.":"Gestão do cardápio e da operação.";
  const root=$("#adminContent");
  if(tab==="dashboard")root.innerHTML=dashboard();
  else if(tab==="orders")root.innerHTML=orders();
@@ -56,31 +64,35 @@ function render(){
 }
 function dashboard(){
  const d=state.data,orders=d.orders||[];
- const pending=orders.filter(x=>x.status==="whatsapp_pending").length;
+ const pending=orders.filter(x=>x.payment_status!=="paid"&&x.status!=="cancelled").length;
  const active=(d.products||[]).filter(x=>x.active).length;
- const confirmed=orders.filter(x=>["received","preparing","dispatched","delivered"].includes(x.status)).length;
- const delivered=orders.filter(x=>x.status==="delivered"&&x.total_cents!==null);
- const sales=delivered.reduce((s,x)=>s+x.total_cents,0);
- const recent=orders.slice(0,7);
+ const confirmed=orders.filter(x=>x.payment_status==="paid"&&workflow.includes(x.status)).length;
+ const delivered=orders.filter(x=>x.status==="delivered"&&x.payment_status==="paid"&&x.total_cents!==null);
+ const sales=delivered.reduce((sum,x)=>sum+x.total_cents,0);
  return '<div class="cards">'+[
- ["Pedidos aguardando",pending,"A mensagem ainda pode não ter sido enviada"],
- ["Pedidos confirmados",confirmed,"Marcados pela equipe"],
- ["Produtos disponíveis",active,"Visíveis no cardápio"],
- ["Entregas concluídas",money(sales),"Total de pedidos marcados como entregues"]
+  ["Aguardando pagamento",pending,"Não liberados para preparo"],
+  ["Pedidos pagos",confirmed,"Liberados após aprovação do Pix"],
+  ["Produtos disponíveis",active,"Visíveis no cardápio"],
+  ["Vendas entregues",money(sales),"Apenas pedidos pagos e entregues"]
  ].map(x=>'<div class="metric"><small>'+esc(x[0])+'</small><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join("")+'</div>'+
- '<div class="alert"><b>Importante:</b> um pedido em “Aguardando WhatsApp” é apenas uma tentativa registrada no site. O cliente precisa enviar a mensagem e a equipe confirmar o recebimento. Não trate esses registros como vendas.</div>'+
- '<div class="panel"><div class="panel-head"><h2>Pedidos recentes</h2><button class="btn" data-goto="orders">Ver todos</button></div>'+ordersTable(recent)+'</div>'+
- '<div class="panel"><h2>Checklist de publicação</h2><p>Antes de divulgar amplamente, configure <b>horários, bairros atendidos, taxas de entrega e formas de pagamento</b>. O cardápio atual já está carregado.</p><button class="btn primary" data-goto="settings">Configurar loja</button></div>';
+ '<div class="alert"><b>🔒 Pagamento antecipado obrigatório.</b> O checkout está temporariamente bloqueado até a integração Pix. Nenhum pedido pode ser enviado para preparo sem aprovação do pagamento pelo provedor.</div>'+
+ '<div class="panel"><div class="panel-head"><h2>Pedidos recentes</h2><button class="btn" data-goto="orders">Ver todos</button></div>'+ordersTable(orders.slice(0,7))+'</div>'+
+ '<div class="panel"><h2>Operação e acompanhamento</h2><p>O painel permite atualizar o andamento dos pedidos pagos e compartilhar o link individual com o cliente. O cliente acompanha pelo link, atualizado a cada 10 segundos.</p><div class="toolbar"><a class="btn" href="./acompanhar.html?demo=1" target="_blank" rel="noopener">Visualizar acompanhamento de exemplo ↗</a><button class="btn primary" data-goto="settings">Configurar loja</button></div></div>';
 }
 function ordersTable(rows){
  if(!rows.length)return '<div class="empty">Nenhum pedido registrado ainda.</div>';
- return '<div class="table-wrap"><table class="data-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Valor</th><th>Situação</th><th>Detalhes</th></tr></thead><tbody>'+rows.map(x=>
- '<tr><td><b>#'+esc(x.order_code)+'</b></td><td>'+esc(x.customer_name)+'</td><td>'+date(x.created_at)+'</td><td>'+esc(x.total_cents===null?"A confirmar":money(x.total_cents))+'</td><td><select aria-label="Status do pedido '+esc(x.order_code)+'" data-status="'+esc(x.id)+'">'+Object.entries(statuses).map(([k,v])=>'<option value="'+k+'" '+(x.status===k?"selected":"")+'>'+esc(v)+'</option>').join("")+'</select></td><td><button class="action" data-order="'+esc(x.id)+'">Abrir</button></td></tr>'
- ).join("")+'</tbody></table></div>';
+ return '<div class="table-wrap"><table class="data-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Valor</th><th>Pagamento</th><th>Situação</th><th>Detalhes</th></tr></thead><tbody>'+rows.map(x=>{
+ const paid=x.payment_status==="paid",options=nextStatuses(x);
+ const opts=options.map(k=>'<option value="'+esc(k)+'" '+(x.status===k?"selected":"")+'>'+esc(statuses[k]||k)+'</option>').join("");
+ return '<tr><td><b>#'+esc(x.order_code)+'</b></td><td>'+esc(x.customer_name)+'</td><td>'+date(x.created_at)+'</td><td>'+esc(x.total_cents===null?"A confirmar":money(x.total_cents))+'</td>'+
+ '<td><span class="pill '+(paid?"green":"red")+'">'+(paid?"Pix aprovado":x.payment_status==="refunded"?"Estornado":"Não pago")+'</span></td>'+
+ '<td><select aria-label="Status do pedido '+esc(x.order_code)+'" data-status="'+esc(x.id)+'" '+(options.length===1?"disabled":"")+'>'+opts+'</select></td>'+
+ '<td><button class="action" data-order="'+esc(x.id)+'">Abrir</button></td></tr>';
+ }).join("")+'</tbody></table></div>';
 }
 function orders(){
  const all=state.data.orders||[];
- return '<div class="panel"><div class="panel-head"><div><h2>Solicitações de pedido</h2><p class="muted small">Histórico limitado aos 500 registros mais recentes. Apenas pedidos confirmados manualmente contam como recebidos.</p></div><div class="toolbar"><select id="orderFilter" aria-label="Filtrar pedidos"><option value="">Todos os status</option>'+Object.entries(statuses).map(([k,v])=>'<option value="'+k+'">'+esc(v)+'</option>').join("")+'</select><button class="btn" id="exportOrders">Exportar CSV</button></div></div><div id="ordersTable">'+ordersTable(all)+'</div></div>';
+ return '<div class="panel"><div class="panel-head"><div><h2>Pedidos e pagamentos</h2><p class="muted small">Apenas pagamentos aprovados pelo provedor liberam o preparo. Acompanhe os status e compartilhe o link individual.</p></div><div class="toolbar"><select id="orderFilter" aria-label="Filtrar pedidos"><option value="">Todos os status</option>'+Object.entries(statuses).map(([k,v])=>'<option value="'+k+'">'+esc(v)+'</option>').join("")+'</select><button class="btn" id="exportOrders">Exportar CSV</button></div></div><div id="ordersTable">'+ordersTable(all)+'</div></div>';
 }
 function listing(table){
  const rows=state.data[table]||[];
@@ -195,25 +207,28 @@ async function saveEditor(e){
 function showOrder(id){
  const o=(state.data.orders||[]).find(x=>x.id===id);if(!o)return;
  editContext=null;$("#dialogTitle").textContent="Pedido #"+o.order_code;$("#saveEdit").classList.add("hidden");
- const items=Array.isArray(o.items)?o.items:[];
+ const items=Array.isArray(o.items)?o.items:[],paid=o.payment_status==="paid";
  $("#editFields").innerHTML='<p class="muted">Registrado em '+date(o.created_at)+' • '+esc(statuses[o.status]||o.status)+'</p>'+
+ '<div class="alert"><b>Pagamento:</b> '+(paid?"✓ Pix aprovado em "+date(o.paid_at):"⏳ Não aprovado — pedido bloqueado para preparo")+'</div>'+
  '<h3>Cliente</h3><p>'+esc(o.customer_name)+' • '+esc(o.customer_phone)+'</p>'+
  '<h3>Entrega</h3><p>'+esc(o.street)+', '+esc(o.street_number)+' — '+esc(o.neighborhood)+'<br>'+esc(o.city)+' • CEP '+esc(o.zip)+'<br>'+esc(o.complement)+' '+esc(o.reference)+'</p>'+
  '<h3>Itens</h3>'+items.map(i=>'<p><b>'+esc(i.qty)+'× '+esc(i.name)+'</b> — '+money(i.line_total_cents)+'<br><small>'+esc((i.extras||[]).map(e=>e.name).join(", "))+' '+esc(i.sauce||"")+' '+esc(i.notes||"")+'</small></p>').join("")+
  '<hr style="border-color:#5a4032"><p>Subtotal: '+money(o.subtotal_cents)+'<br>Entrega: '+(o.delivery_fee_cents===null?"A confirmar":money(o.delivery_fee_cents))+'<br>Desconto: '+money(o.discount_cents)+'<br><b>Total: '+(o.total_cents===null?"A confirmar":money(o.total_cents))+'</b></p>'+
- '<p>Pagamento: '+esc(o.payment)+' • Troco: '+esc(o.change_for||"—")+'</p><p>Observações: '+esc(o.notes||"—")+'</p>'+
- '<p class="small muted">Este registro não comprova que a mensagem foi enviada pelo WhatsApp.</p>';
+ '<p>Pagamento escolhido: '+esc(o.payment)+'</p><p>Observações: '+esc(o.notes||"—")+'</p>'+
+ (paid&&o.tracking_token?'<div class="alert"><b>Acompanhamento do cliente</b><p class="small">O link individual mostra as etapas e atualiza automaticamente. O WhatsApp exige envio manual pelo administrador.</p><div class="toolbar"><button class="btn" type="button" data-copy-track="'+esc(o.id)+'">Copiar link de acompanhamento</button><button class="btn primary" type="button" data-wa-status="'+esc(o.id)+'">Avisar cliente no WhatsApp ↗</button></div></div>':'<p class="small muted">O link de acompanhamento e o aviso do pedido serão liberados após a confirmação automática do Pix.</p>');
  $("#editDialog").showModal();
 }
 async function changeStatus(id,status){
- if(!Object.keys(statuses).includes(status))return;
- const {error}=await sb.from("orders").update({status,updated_at:new Date().toISOString()}).eq("id",id);
- if(error){toast(error.message,true);render();return;}
- toast("Status atualizado.");await loadAll();
+ const o=(state.data.orders||[]).find(x=>x.id===id);
+ if(!o||!nextStatuses(o).includes(status)||status===o.status)return;
+ if(status==="cancelled"&&o.payment_status==="paid"&&!confirm("Cancelar pedido pago? O cancelamento não faz estorno automático. Será necessário tratar a devolução com o provedor.")){render();return;}
+ const {data,error}=await sb.from("orders").update({status}).eq("id",id).eq("status",o.status).select("id");
+ if(error||!data?.length){toast(error?.message||"O pedido mudou. Atualize a página e tente novamente.",true);await loadAll();return;}
+ toast("Status atualizado. O cliente verá a alteração no acompanhamento.");await loadAll();
 }
 function exportCsv(){
  const rows=state.data.orders||[];
- const keys=["order_code","created_at","customer_name","customer_phone","street","street_number","neighborhood","city","zip","payment","subtotal_cents","delivery_fee_cents","discount_cents","total_cents","status"];
+ const keys=["order_code","created_at","customer_name","customer_phone","street","street_number","neighborhood","city","zip","payment","payment_status","paid_at","subtotal_cents","delivery_fee_cents","discount_cents","total_cents","status"];
  const safe=x=>{let s=String(x??"");if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
  const csv="\ufeff"+keys.join(";")+"\n"+rows.map(o=>keys.map(k=>safe(o[k])).join(";")).join("\n");
  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
