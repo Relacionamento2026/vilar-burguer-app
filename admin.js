@@ -117,6 +117,53 @@ function orders(){
  const all=state.data.orders||[];
  return '<div class="panel"><div class="panel-head"><div><h2>Pedidos e pagamentos</h2><p class="muted small">Apenas pagamentos aprovados pelo provedor liberam o preparo. Acompanhe os status e compartilhe o link individual.</p></div><div class="toolbar"><select id="orderFilter" aria-label="Filtrar pedidos"><option value="">Todos os status</option>'+Object.entries(statuses).map(([k,v])=>'<option value="'+k+'">'+esc(v)+'</option>').join("")+'</select><button class="btn" id="exportOrders">Exportar CSV</button></div></div><div id="ordersTable">'+ordersTable(all)+'</div></div>';
 }
+function demoOrdersTable(rows){
+ if(!rows.length)return '<div class="empty">Nenhum pedido de teste. Crie um para validar o fluxo completo.</div>';
+ return '<div class="table-wrap"><table class="data-table"><thead><tr><th>Pedido</th><th>Produto</th><th>Valor simulado</th><th>Status</th><th>Acompanhamento</th></tr></thead><tbody>'+
+ rows.map(o=>'<tr><td><b>'+esc(o.order_code)+'</b><br><small>'+date(o.created_at)+'</small></td><td>'+esc(o.quantity)+'× '+esc(o.product_name)+'</td><td>'+money(o.total_cents)+'</td>'+
+ '<td><select data-demo-status="'+esc(o.id)+'" aria-label="Status de '+esc(o.order_code)+'" '+(nextDemoStatuses(o).length===1?"disabled":"")+'>'+
+ nextDemoStatuses(o).map(st=>'<option value="'+st+'" '+(st===o.status?"selected":"")+'>'+esc(statuses[st]||st)+'</option>').join("")+'</select></td>'+
+ '<td><div class="toolbar"><a class="btn" href="'+esc(demoTrackingUrl(o))+'" target="_blank" rel="noopener noreferrer">Acompanhar ↗</a><button class="btn" data-demo-copy="'+esc(o.id)+'">Copiar link</button><button class="btn danger" data-demo-delete="'+esc(o.id)+'">Excluir</button></div></td></tr>').join("")+'</tbody></table></div>';
+}
+function demoOrders(){
+ const available=(state.data.products||[]).filter(x=>x.active);
+ return '<div class="alert"><b>🧪 AMBIENTE DE TESTE.</b> Sem Pix real, sem WhatsApp e sem impacto nos indicadores de faturamento. Utilize somente dados fictícios.</div>'+
+ '<form id="demoForm" class="panel"><div class="panel-head"><h2>Simular um novo pedido</h2><button class="btn primary" type="submit">Criar pedido de teste</button></div>'+
+ '<div class="grid"><div class="field"><label for="demoProduct">Produto</label><select id="demoProduct" name="product_id" required>'+available.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' — '+money(x.price_cents)+'</option>').join("")+'</select></div>'+
+ '<div class="field"><label for="demoQty">Quantidade</label><input id="demoQty" type="number" name="quantity" value="1" min="1" max="20" required></div></div>'+
+ '<p class="small muted">O preço é calculado no banco com base no produto cadastrado. O pedido começa em “Recebido” com pagamento simulado, sem qualquer transação financeira.</p></form>'+
+ '<div class="panel"><div class="panel-head"><div><h2>Pedidos simulados</h2><p class="muted small">Altere os status para testar o acompanhamento ao vivo. Os registros são independentes dos pedidos reais.</p></div><button class="btn" id="refreshDemo">↻ Atualizar</button></div>'+
+ demoOrdersTable((state.data.demo_orders||[]).slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)))+'</div>';
+}
+async function createDemoOrder(e){
+ e.preventDefault();
+ const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;
+ try{
+  const f=new FormData(e.currentTarget),product_id=String(f.get("product_id")||"");
+  const quantity=Number(f.get("quantity"));
+  if(!Number.isInteger(quantity)||quantity<1||quantity>20)throw Error("Quantidade inválida.");
+  const {data,error}=await sb.from("demo_orders").insert({product_id,quantity}).select("id,tracking_token,order_code").single();
+  if(error)throw error;
+  toast("Pedido de teste criado. Nenhum pagamento foi realizado.");
+  await loadAll();selectTab("demo_orders");
+  const o=(state.data.demo_orders||[]).find(x=>x.id===data.id);
+  if(o)window.open(demoTrackingUrl(o),"_blank","noopener,noreferrer");
+ }catch(err){toast(errorText(err),true);}finally{btn.disabled=false;}
+}
+async function changeDemoStatus(id,status){
+ const o=(state.data.demo_orders||[]).find(x=>x.id===id);
+ if(!o||!nextDemoStatuses(o).includes(status)||status===o.status)return;
+ const {data,error}=await sb.from("demo_orders").update({status}).eq("id",id).eq("status",o.status).select("id");
+ if(error||!data?.length){toast(error?.message||"Status desatualizado. Atualize a lista.",true);await loadAll();return;}
+ toast("Etapa simulada atualizada.");await loadAll();
+}
+async function deleteDemoOrder(id){
+ const o=(state.data.demo_orders||[]).find(x=>x.id===id);
+ if(!o||!confirm("Excluir permanentemente o pedido de teste "+o.order_code+"?"))return;
+ const {error}=await sb.from("demo_orders").delete().eq("id",id);
+ if(error){toast(error.message,true);return;}
+ toast("Pedido de teste excluído.");await loadAll();
+}
 function listing(table){
  const rows=state.data[table]||[];
  const labels={products:["Produto","Categoria","Preço","Disponível"],extras:["Adicional","Preço","Disponível"],categories:["Categoria","Ordem","Disponível"],delivery_zones:["Bairro","Cidade","Taxa","Disponível"],coupons:["Cupom","Desconto","Uso","Disponível"]};
@@ -311,6 +358,12 @@ $("#adminContent").addEventListener("click",e=>{
  if(n)editor(n.dataset.new);else if(ed){const t=ed.dataset.edit;const obj=(state.data[t]||[]).find(x=>String(x.id??x.code)===ed.dataset.id);if(obj)editor(t,obj);}
  else if(ord)showOrder(ord.dataset.order);else if(go)selectTab(go.dataset.goto);
  else if(e.target.closest("#exportOrders"))exportCsv();
+ else if(e.target.closest("#refreshDemo"))loadAll();
+ else if(e.target.closest("[data-demo-copy]")){
+  const o=(state.data.demo_orders||[]).find(x=>x.id===e.target.closest("[data-demo-copy]").dataset.demoCopy);
+  if(o)navigator.clipboard.writeText(demoTrackingUrl(o)).then(()=>toast("Link de teste copiado.")).catch(()=>window.prompt("Copie o link:",demoTrackingUrl(o)));
+ }
+ else if(e.target.closest("[data-demo-delete]"))deleteDemoOrder(e.target.closest("[data-demo-delete]").dataset.demoDelete);
 });
 
 $("#editFields").addEventListener("click",async e=>{
@@ -339,8 +392,9 @@ async function refreshOrdersQuietly(){
  $("#ordersTable").innerHTML=ordersTable(state.data.orders.filter(x=>!filter||x.status===filter));
 }
 setInterval(refreshOrdersQuietly,12000);
-$("#adminContent").addEventListener("change",e=>{const s=e.target.closest("[data-status]");if(s)changeStatus(s.dataset.status,s.value);if(e.target.id==="orderFilter"){const v=e.target.value;$("#ordersTable").innerHTML=ordersTable((state.data.orders||[]).filter(x=>!v||x.status===v));}});
-$("#adminContent").addEventListener("submit",e=>{if(e.target.id==="settingsForm")saveSettings(e);});
+$("#adminContent").addEventListener("change",e=>{const s=e.target.closest("[data-status]");if(s)changeStatus(s.dataset.status,s.value);
+ const d=e.target.closest("[data-demo-status]");if(d)changeDemoStatus(d.dataset.demoStatus,d.value);if(e.target.id==="orderFilter"){const v=e.target.value;$("#ordersTable").innerHTML=ordersTable((state.data.orders||[]).filter(x=>!v||x.status===v));}});
+$("#adminContent").addEventListener("submit",e=>{if(e.target.id==="settingsForm")saveSettings(e);if(e.target.id==="demoForm")createDemoOrder(e);});
 $("#editForm").addEventListener("submit",saveEditor);
 $("#cancelEdit").addEventListener("click",()=>$("#editDialog").close());
 $("#editDialog").addEventListener("close",()=>{editContext=null;$("#saveEdit").classList.remove("hidden");});
