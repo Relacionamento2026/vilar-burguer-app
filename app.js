@@ -31,14 +31,13 @@ const subtotal=()=>cart.reduce((s,x)=>s+unit(x)*x.qty,0);
 function storeOpen(){
  if(settings.open_override===false)return false;
  if(settings.open_override===true)return true;
- const h=settings.opening_hours||{};
- if(!Object.keys(h).length)return true;
+ const h=settings.opening_hours||{};if(!Object.keys(h).length)return true;
  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Sao_Paulo",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
  const val=k=>parts.find(p=>p.type===k)?.value||"";
- const day=val("weekday").toLowerCase(),now=Number(val("hour"))*60+Number(val("minute"));
- const slot=h[day];if(!slot?.open||!slot?.close)return false;
+ const days=["sun","mon","tue","wed","thu","fri","sat"],today=val("weekday").toLowerCase(),prev=days[(days.indexOf(today)+6)%7],now=Number(val("hour"))*60+Number(val("minute"));
  const toMin=t=>{const m=/^(\d{2}):(\d{2})$/.exec(t);return m?Number(m[1])*60+Number(m[2]):-1};
- const a=toMin(slot.open),b=toMin(slot.close);return a>=0&&b>=0&&(b>a?now>=a&&now<b:now>=a||now<b);
+ const active=(slot,previous)=>{if(!slot?.open||!slot?.close)return false;const a=toMin(slot.open),b=toMin(slot.close);if(a<0||b<0)return false;if(a===b)return !previous;if(b>a)return !previous&&now>=a&&now<b;return previous?now<b:now>=a;};
+ return active(h[today],false)||active(h[prev],true);
 }
 function canOrder(){return ready&&settings.accepting_orders!==false&&storeOpen();}
 function showStatus(){
