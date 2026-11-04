@@ -39,11 +39,11 @@ function storeOpen(){
  const active=(slot,previous)=>{if(!slot?.open||!slot?.close)return false;const a=toMin(slot.open),b=toMin(slot.close);if(a<0||b<0)return false;if(a===b)return !previous;if(b>a)return !previous&&now>=a&&now<b;return previous?now<b:now>=a;};
  return active(h[today],false)||active(h[prev],true);
 }
-function canOrder(){return ready&&settings.accepting_orders!==false&&storeOpen();}
+function canOrder(){return ready&&settings.payment_gateway_ready===true&&settings.accepting_orders===true&&storeOpen();}
 function showStatus(){
  const el=$("#storeStatus");if(!el)return;
  const h=settings.opening_hours||{};
- if(!ready){el.textContent="⏳ Carregando cardápio";el.classList.add("closed");return;}
+ if(!ready){el.textContent="⏳ Carregando cardápio";el.classList.add("closed");return;}if(settings.payment_gateway_ready!==true){el.textContent="🔒 Pix em configuração • cardápio disponível";el.classList.add("closed");return;}
  if(!settings.accepting_orders||!storeOpen()){el.textContent="🔴 Fechado para pedidos";el.classList.add("closed");}
  else if(settings.open_override===true||Object.keys(h).length){el.textContent="🟢 Recebendo pedidos";el.classList.remove("closed");}
  else{el.textContent="🛵 Delivery • horário a confirmar";el.classList.remove("closed");}
@@ -53,7 +53,7 @@ function renderProducts(){
  const query=norm($("#search").value);
  const shown=products.filter(p=>(activeCategory==="todos"||p.cat===activeCategory)&&norm(p.name+" "+p.desc).includes(query));
  $("#resultCount").textContent=shown.length+" "+(shown.length===1?"item":"itens");
- $("#catalog").innerHTML=shown.map(p=>'<article class="product"><div class="product-image"><img loading="lazy" decoding="async" src="'+esc(photoOf(p))+'" alt="'+esc(p.image_url?"Imagem de "+p.name:"Imagem ilustrativa de lanche")+'"></div><div class="product-info"><div class="product-top">'+(p.tag?'<span class="tag '+(p.cat==="vegetarianos"?"veg":"")+'">'+esc(p.tag)+'</span>':"")+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.desc)+'</p><div class="product-bottom"><strong class="price">'+money(p.price)+'</strong><button class="add-btn" data-add="'+esc(p.id)+'" type="button" '+(!canOrder()?"disabled":"")+' aria-label="Personalizar '+esc(p.name)+'"><span aria-hidden="true">＋</span> Adicionar</button></div></div></article>').join("");
+ $("#catalog").innerHTML=shown.map(p=>'<article class="product"><div class="product-image"><img loading="lazy" decoding="async" src="'+esc(photoOf(p))+'" alt="'+esc(p.image_url?"Imagem de "+p.name:"Imagem ilustrativa de lanche")+'"></div><div class="product-info"><div class="product-top">'+(p.tag?'<span class="tag '+(p.cat==="vegetarianos"?"veg":"")+'">'+esc(p.tag)+'</span>':"")+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.desc)+'</p><div class="product-bottom"><strong class="price">'+money(p.price)+'</strong><button class="add-btn" data-add="'+esc(p.id)+'" type="button" '+(!ready?"disabled":"")+' aria-label="Personalizar '+esc(p.name)+'"><span aria-hidden="true">＋</span> Adicionar</button></div></div></article>').join("");
  $("#emptyResults").classList.toggle("hide",shown.length>0);
  if(!ready)$("#emptyResults").innerHTML='<p>Cardápio temporariamente indisponível. Entre em contato pelo WhatsApp.</p><a class="primary" href="https://wa.me/'+STORE.whatsapp+'" target="_blank" rel="noopener">Falar com a loja</a>';
  else $("#emptyResults").innerHTML="<p>Nenhum produto encontrado. Tente outra busca.</p><button id=\"clearSearch\" class=\"secondary\" type=\"button\">Limpar filtros</button>";
@@ -65,7 +65,7 @@ function toggleDialog(type,show){
 }
 function closeAll(){for(const sel of ["#itemModal","#cartDrawer"]){$(sel).classList.remove("show");$(sel).setAttribute("aria-hidden","true");}$("#overlay").classList.remove("show");document.body.classList.remove("lock");if(previousFocus?.isConnected)previousFocus.focus();}
 function openProduct(id){
- if(!canOrder()){toast("Consulte o atendimento da loja antes de pedir.");return;}
+ if(!ready){toast("O cardápio está temporariamente indisponível.");return;}
  const p=productBy(id);if(!p)return;
  activeProduct=p;quantity=1;$("#modalTitle").textContent=p.name;$("#modalDesc").textContent=p.desc;$("#modalQuantity").textContent="1";$("#itemNotes").value="";
  $("#extrasBlock").classList.toggle("hide",p.cat==="combos");
@@ -76,7 +76,7 @@ function openProduct(id){
 const checkedExtras=()=>[...document.querySelectorAll(".extra-check:checked")].map(el=>el.value);
 function updateModalPrice(){if(activeProduct)$("#modalPrice").textContent=money(((activeProduct.price||0)+(activeProduct.cat==="combos"?0:checkedExtras().reduce((s,id)=>s+(extraBy(id)?.price||0),0)))*quantity);}
 function addCurrentProduct(){
- if(!activeProduct||!canOrder())return;
+ if(!activeProduct||!ready)return;
  const item={id:activeProduct.id,qty:quantity,extras:activeProduct.cat==="combos"?[]:checkedExtras().sort(),sauce:document.querySelector('input[name="sauce"]:checked')?.value||"Sem preferência",notes:clean($("#itemNotes").value).slice(0,250)};
  const key=x=>JSON.stringify([x.id,x.extras,x.sauce,x.notes]);const old=cart.find(x=>key(x)===key(item));
  if(old)old.qty=Math.min(50,old.qty+quantity);else cart.push(item);
@@ -95,7 +95,7 @@ function updateShipping(){
  $("#grandTotal").textContent=known?money(price+fee):"A confirmar";
  $("#checkoutInfo").textContent=known?"Total antes de possíveis descontos de cupom. Confirme no WhatsApp.":"O valor final depende da taxa de entrega. Consulte a loja antes de confirmar.";
  const disabled=!canOrder()||!cart.length;$("#sendOrder").disabled=disabled;
- if(!canOrder())$("#checkoutInfo").textContent="Loja indisponível para pedidos pelo site no momento. Consulte o WhatsApp.";
+ if(settings.payment_gateway_ready!==true){$("#checkoutInfo").textContent="Pagamento antecipado obrigatório. Estamos configurando o Pix automático; por segurança, não é possível finalizar pedidos ainda.";$("#sendOrder").textContent="🔒 Pagamento Pix em configuração";}else if(!canOrder())$("#checkoutInfo").textContent="Loja indisponível para pedidos pelo site no momento.";
 }
 function renderCart(){
  const total=count(),price=subtotal();
@@ -142,9 +142,9 @@ async function bootstrap(){
   cart=cart.filter(item=>productBy(item.id)&&item.extras.every(id=>extraBy(id)));
   persist();ready=true;
   if(settings.city&&!$("#city").value)$("#city").value=settings.city;
-  const options=settings.payment_methods||["Pix","Dinheiro","Cartão na entrega"];
+  const options=["Pix"];
   $("#payment").innerHTML='<option value="">Selecione</option>'+options.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join("");
-  document.querySelectorAll("[data-direct-wa]").forEach(a=>a.href="https://wa.me/"+STORE.whatsapp+"?text="+encodeURIComponent("Olá! Gostaria de fazer um pedido."));
+  document.querySelectorAll("[data-direct-wa]").forEach(a=>a.href="https://wa.me/"+STORE.whatsapp+"?text="+encodeURIComponent("Olá! Tenho uma dúvida sobre a hamburgueria."));
   showStatus();renderFilters();renderProducts();renderCart();
  }catch(err){
   console.error("Não foi possível carregar o catálogo.",err);
@@ -158,7 +158,7 @@ function upgradeCheckout(){
  $("#generalNotes").closest(".field").insertAdjacentHTML("beforebegin",'<div class="field"><label for="coupon">Cupom (opcional)</label><input id="coupon" name="coupon" maxlength="24" autocomplete="off" placeholder="Código promocional"><p class="checkout-info">O desconto será validado antes de abrir o WhatsApp.</p></div>');
  $("#generalNotes").closest(".field").insertAdjacentHTML("afterend",'<div class="field"><label class="privacy-label"><input type="checkbox" id="privacyConsent" name="privacyConsent" required> Concordo com o uso dos meus dados para registrar o pedido e preparar a mensagem para a hamburgueria. <span class="required">*</span></label><p class="checkout-info">Consulte a <a href="./privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. A mensagem só será enviada quando você confirmar no WhatsApp.</p></div>');
  const delivery=$(".delivery-note");delivery.id="deliveryNote";delivery.insertAdjacentHTML("afterend",'<div class="checkout-total"><span>Total estimado</span><strong id="grandTotal">A confirmar</strong></div><div class="checkout-info" id="checkoutInfo">Taxa de entrega a confirmar.</div>');
- $("#sendOrder").disabled=true;$("#sendOrder").textContent="💬 Preparar pedido no WhatsApp";
+ $("#sendOrder").disabled=true;$("#sendOrder").textContent="🔒 Pagamento Pix em configuração";
 }
 upgradeCheckout();
 $("#filters").addEventListener("click",e=>{const el=e.target.closest("[data-cat]");if(!el)return;activeCategory=el.dataset.cat;renderFilters();renderProducts();});
@@ -176,35 +176,11 @@ $("#cartItems").addEventListener("click",e=>{const rm=e.target.closest("[data-re
 $("#payment").addEventListener("change",e=>$("#changeBlock").classList.toggle("hide",e.target.value!=="Dinheiro"));
 $("#neighborhood").addEventListener("input",updateShipping);$("#city").addEventListener("input",updateShipping);
 $("#checkoutForm").addEventListener("input",()=>{checkoutKey=crypto.randomUUID();});
-$("#checkoutForm").addEventListener("submit",async e=>{
- e.preventDefault();if(!canOrder()||!cart.length){toast("A loja não está recebendo pedidos pelo site.");return;}
- const form=new FormData(e.currentTarget),fields=Object.fromEntries(form.entries());
- const required=["name","phone","street","zip","number","neighborhood","city","payment"];
- const missing=required.find(k=>!clean(fields[k]));
- const phone=digits(fields.phone),zip=digits(fields.zip);
- let target=missing?e.currentTarget.elements.namedItem(missing):null;
- if(!target&&(clean(fields.name).length<2||clean(fields.street).length<2||clean(fields.neighborhood).length<2||clean(fields.city).length<2))target=$("#clientName");
- if(!target&&![10,11].includes(phone.length))target=$("#clientPhone");
- if(!target&&zip.length!==8)target=$("#zip");
- if(target){target.focus();target.setAttribute("aria-invalid","true");toast("Confira nome, telefone, CEP e endereço.");return;}
- if(!$("#privacyConsent").checked){$("#privacyConsent").focus();toast("Confirme o compartilhamento dos dados.");return;}
- fields.zip=zip.slice(0,5)+"-"+zip.slice(5);
- const payload={idempotency_key:checkoutKey,consent:true,items:cart,customer:fields,coupon:clean(fields.coupon).toUpperCase()};
- const btn=$("#sendOrder"),oldText=btn.textContent;
- btn.disabled=true;btn.textContent="Preparando pedido...";
- const popup=window.open("about:blank","_blank");
- if(popup){popup.document.title="Preparando seu pedido";popup.document.body.textContent="Preparando pedido do Vilar Burguer...";}
- try{
-  const res=await fetch(CONFIG.checkoutFunction,{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.publishableKey},body:JSON.stringify(payload)});
-  const order=await res.json();
-  if(!res.ok||!order.ok)throw Error(order.error||"Não foi possível registrar o pedido.");
-  const wa="https://wa.me/"+(order.whatsapp||STORE.whatsapp)+"?text="+encodeURIComponent(message(fields,order));
-  try{sessionStorage.setItem("vilar-last-draft",JSON.stringify({createdAt:new Date().toISOString(),order_code:order.order_code,status:"aguardando_envio_whatsapp"}));}catch(e){}
-  if(popup){popup.opener=null;popup.location.replace(wa);}else window.location.assign(wa);
-  toast("Pedido #"+order.order_code+" preparado. Envie a mensagem no WhatsApp para confirmar.");
- }catch(err){if(popup&&!popup.closed)popup.close();toast(err.message||"Falha no pedido. Tente novamente ou contate a loja.");}
- finally{btn.disabled=!canOrder();btn.textContent=oldText;}
+$("#checkoutForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ toast("O pagamento Pix automático ainda não está configurado. Nenhum pedido foi enviado ou confirmado.");
 });
+
 renderFilters();renderProducts();renderCart();bootstrap();
 if("serviceWorker" in navigator&&location.protocol==="https:")window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 })();
