@@ -321,7 +321,35 @@ function settings(){
  field("delivery_note","Aviso sobre entrega",x.delivery_note||"","textarea",'maxlength="400"')+
  '<h3>Forma de pagamento</h3><div class="alert">🔒 <b>Pix antecipado obrigatório.</b> Dinheiro e cartão na entrega estão desabilitados. A conta de recebimento ainda não foi definida.</div>'+ 
  '<h3>Horários de funcionamento</h3><p class="muted small">Se nenhum dia for marcado, os horários ficam como “a confirmar”. Configure os dias para bloquear pedidos fora do expediente.</p><div class="day-grid">'+hours+'</div>'+
- '<div class="form-actions"><button class="btn primary" type="submit">Salvar configurações</button></div></form>';
+ '<div class="form-actions"><button class="btn primary" type="submit">Salvar configurações</button></div></form>'+
+ '<form class="panel" id="passwordForm"><div class="panel-head"><h2>Segurança da conta</h2><button class="btn primary" type="submit">Alterar minha senha</button></div>'+
+ '<p class="small muted">Cada administrador pode alterar sua própria senha sem solicitar ao desenvolvedor. A senha atual é exigida para confirmar sua identidade.</p>'+
+ '<div class="grid"><div class="field"><label for="currentPassword">Senha atual</label><input type="password" id="currentPassword" name="current_password" autocomplete="current-password" required></div>'+
+ '<div class="field"><label for="newPassword">Nova senha (mínimo 10 caracteres)</label><input type="password" id="newPassword" name="new_password" autocomplete="new-password" minlength="10" required></div>'+
+ '<div class="field"><label for="confirmPassword">Confirme a nova senha</label><input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password" minlength="10" required></div></div></form>'+
+ contractInfo();
+}
+function contractInfo(){
+ const c=state.data.platform_contract?.[0];
+ if(!c)return '';
+ return '<div class="panel"><h2>Vencimento contratual</h2><p><b>Data informada:</b> '+esc(c.due_date.split("-").reverse().join("/"))+' • <b>Valor informado:</b> '+money(c.amount_cents)+'</p>'+
+ '<div class="alert"><b>Suspensão automática desativada.</b> A data está registrada para controle, mas a natureza da cobrança e as condições contratuais ainda precisam ser confirmadas. Não há bloqueio do painel, dos dados ou do acompanhamento de pedidos.</div></div>';
+}
+async function changePassword(e){
+ e.preventDefault();
+ const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');
+ const current=form.elements.current_password.value,pass=form.elements.new_password.value,confirmPass=form.elements.confirm_password.value;
+ if(pass.length<10||pass!==confirmPass){toast("A nova senha precisa ter pelo menos 10 caracteres e ser confirmada corretamente.",true);return;}
+ if(pass===current){toast("Escolha uma senha diferente da atual.",true);return;}
+ btn.disabled=true;
+ try{
+  const {error:reauthError}=await sb.auth.signInWithPassword({email:state.user.email,password:current});
+  if(reauthError)throw Error("Senha atual incorreta ou sessão expirada.");
+  const {error}=await sb.auth.updateUser({password:pass});
+  if(error)throw error;
+  form.reset();toast("Senha alterada com sucesso.");
+ }catch(err){toast(errorText(err),true);}
+ finally{btn.disabled=false;}
 }
 async function saveSettings(e){
  e.preventDefault();const f=new FormData(e.currentTarget),get=k=>String(f.get(k)||"").trim();
@@ -394,7 +422,7 @@ async function refreshOrdersQuietly(){
 setInterval(refreshOrdersQuietly,12000);
 $("#adminContent").addEventListener("change",e=>{const s=e.target.closest("[data-status]");if(s)changeStatus(s.dataset.status,s.value);
  const d=e.target.closest("[data-demo-status]");if(d)changeDemoStatus(d.dataset.demoStatus,d.value);if(e.target.id==="orderFilter"){const v=e.target.value;$("#ordersTable").innerHTML=ordersTable((state.data.orders||[]).filter(x=>!v||x.status===v));}});
-$("#adminContent").addEventListener("submit",e=>{if(e.target.id==="settingsForm")saveSettings(e);if(e.target.id==="demoForm")createDemoOrder(e);});
+$("#adminContent").addEventListener("submit",e=>{if(e.target.id==="settingsForm")saveSettings(e);if(e.target.id==="demoForm")createDemoOrder(e);if(e.target.id==="passwordForm")changePassword(e);});
 $("#editForm").addEventListener("submit",saveEditor);
 $("#cancelEdit").addEventListener("click",()=>$("#editDialog").close());
 $("#editDialog").addEventListener("close",()=>{editContext=null;$("#saveEdit").classList.remove("hidden");});
