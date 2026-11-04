@@ -252,6 +252,17 @@ $("#loginForm").addEventListener("submit",async e=>{
  state.user=data.user;showApp();await loadAll();
  }catch(err){$("#loginError").textContent=errorText(err);}finally{$("#loginButton").disabled=false;}
 });
+$("#signupBtn").addEventListener("click",async()=>{
+ const email=$("#email").value.trim(),password=$("#password").value;
+ if(!email||password.length<6){$("#loginError").textContent="Informe um e-mail válido e uma senha com pelo menos 6 caracteres.";return;}
+ $("#signupBtn").disabled=true;$("#loginError").textContent="";
+ try{
+  const {error}=await sb.auth.signUp({email,password});
+  if(error)throw error;
+  await sb.auth.signOut();
+  $("#loginError").textContent="Conta solicitada. Confirme o e-mail, se receber uma mensagem, e peça ao responsável a liberação administrativa.";
+ }catch(err){$("#loginError").textContent=errorText(err);}finally{$("#signupBtn").disabled=false;}
+});
 async function logout(){await sb.auth.signOut();state.user=null;showLogin();}
 $("#logoutBtn").addEventListener("click",logout);$("#mobileLogoutBtn").addEventListener("click",logout);
 $("#refreshBtn").addEventListener("click",loadAll);
