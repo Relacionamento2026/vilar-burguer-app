@@ -58,6 +58,7 @@ async function loadAll(){
    const {data,error}=await q;if(error)throw new Error(t+": "+error.message);return [t,data||[]];
   }));
   state.data=Object.fromEntries(results);
+  contractReminder();
   const {data:daily,error:dailyError}=await sb.rpc("vilar_daily_sales",{p_days:14});
   state.data.daily_sales=dailyError?[]:(daily||[]);
   if(dailyError)console.warn("Relatório diário indisponível.");
@@ -329,10 +330,28 @@ function settings(){
  '<div class="field"><label for="confirmPassword">Confirme a nova senha</label><input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password" minlength="10" required></div></div></form>'+
  contractInfo();
 }
-function contractNotice(){
- const c=state.data.platform_contract?.[0];
- if(!c?.notice_enabled||c.payment_confirmed_at||todaySP()<c.due_date)return "";
- return '<div class="alert" role="status"><b>Vencimento contratual:</b> existe uma cobrança informada de '+money(c.amount_cents)+' com vencimento em '+esc(c.due_date.split("-").reverse().join("/"))+'. Consulte o responsável pelo contrato para regularização. O painel e os dados continuam acessíveis.</div>';
+function contractNotice(){return "";}
+function brazilNowParts(){
+ const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+ const part=k=>parts.find(x=>x.type===k)?.value||"00";
+ return {day:part("year")+"-"+part("month")+"-"+part("day"),hour:Number(part("hour")),minute:Number(part("minute"))};
+}
+function contractReminder(){
+ const el=$("#contractBanner"),c=state.data.platform_contract?.[0];
+ if(!el)return;
+ if(!c?.notice_enabled||c.payment_confirmed_at){el.classList.add("hidden");return;}
+ const now=brazilNowParts(),noticeDay="2026-11-24",deadlineDay="2026-11-25";
+ if(now.day!==noticeDay&&now.day!==deadlineDay){el.classList.add("hidden");return;}
+ const remaining=now.day===noticeDay?27*60-now.hour*60-now.minute:3*60-now.hour*60-now.minute;
+ const before=remaining>0,amount=money(c.amount_cents);
+ const headline=before?"⚠️ Aviso de renovação da plataforma":"⚠️ Prazo de pagamento encerrado";
+ const detail=before?"A Taxa de Renovação e Manutenção da Plataforma Vilar Burguer, no valor de <b>"+esc(amount)+"</b>, deve ser regularizada até <b>25/11/2026 às 03h (horário de Brasília)</b>. Após esse horário, o acesso administrativo poderá ser suspenso conforme as condições contratuais.":"O prazo de regularização de <b>"+esc(amount)+"</b> terminou em 25/11/2026 às 03h. Entre em contato com o responsável pela plataforma para confirmar o pagamento.";
+ el.innerHTML='<strong>'+headline+'</strong><p>'+detail+'</p><small>Este aviso é destinado exclusivamente à administração da hamburgueria. Caso já tenha efetuado o pagamento, solicite a confirmação ao responsável.</small>';
+ el.classList.remove("hidden");
+ if(now.day===noticeDay&&!document.hidden){
+  const key=now.day+"-"+Math.floor(now.hour/3);
+  if(contractReminder.lastToast!==key){contractReminder.lastToast=key;toast("Lembrete: renovação da plataforma vence em 25/11 às 03h.");}
+ }
 }
 function contractInfo(){
  const c=state.data.platform_contract?.[0];
@@ -425,6 +444,7 @@ async function refreshOrdersQuietly(){
  $("#ordersTable").innerHTML=ordersTable(state.data.orders.filter(x=>!filter||x.status===filter));
 }
 setInterval(refreshOrdersQuietly,12000);
+setInterval(contractReminder,60000);
 $("#adminContent").addEventListener("change",e=>{const s=e.target.closest("[data-status]");if(s)changeStatus(s.dataset.status,s.value);
  const d=e.target.closest("[data-demo-status]");if(d)changeDemoStatus(d.dataset.demoStatus,d.value);if(e.target.id==="orderFilter"){const v=e.target.value;$("#ordersTable").innerHTML=ordersTable((state.data.orders||[]).filter(x=>!v||x.status===v));}});
 $("#adminContent").addEventListener("submit",e=>{if(e.target.id==="settingsForm")saveSettings(e);if(e.target.id==="demoForm")createDemoOrder(e);if(e.target.id==="passwordForm")changePassword(e);});
