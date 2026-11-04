@@ -42,7 +42,7 @@ const $=s=>document.querySelector(s),demoOrderToken=new URLSearchParams(location
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=t=>t?new Date(t).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short",timeZone:"America/Sao_Paulo"}):"";
 const stages=[["received","Pedido confirmado","Pagamento aprovado e pedido recebido pela loja."],["preparing","Em preparação","A cozinha está preparando seu pedido."],["dispatched","Saiu para entrega","Seu pedido está a caminho do endereço informado."],["delivered","Pedido entregue","Entrega finalizada. Bom apetite!"]];
-const demoData={order_code:"VB-EXEMPLO",status:"preparing",payment_status:"paid",created_at:new Date(Date.now()-21*60000).toISOString(),paid_at:new Date(Date.now()-20*60000).toISOString(),updated_at:new Date(Date.now()-3*60000).toISOString(),events:[{status:"received",at:new Date(Date.now()-20*60000).toISOString()},{status:"preparing",at:new Date(Date.now()-3*60000).toISOString()}]};
+const demoData={is_test:true,order_code:"VB-EXEMPLO",status:"preparing",payment_status:"simulated",created_at:new Date(Date.now()-21*60000).toISOString(),paid_at:new Date(Date.now()-20*60000).toISOString(),updated_at:new Date(Date.now()-3*60000).toISOString(),events:[{status:"received",at:new Date(Date.now()-20*60000).toISOString()},{status:"preparing",at:new Date(Date.now()-3*60000).toISOString()}]};
 let last=null,busy=false;
 function error(title,message){$("#loading").classList.add("hidden");$("#orderView").classList.add("hidden");$("#errorState").classList.remove("hidden");$("#errorTitle").textContent=title;$("#errorMessage").textContent=message;}
 function render(o){
