@@ -34,7 +34,10 @@ assert(adminJs.includes('function demoOrders()')&&adminJs.includes('function cre
 assert(adminJs.includes('sb.from("demo_orders")'),'Demo orders must use isolated table');
 assert(adminJs.includes('function changePassword(')&&adminJs.includes('sb.auth.updateUser({password:pass})'),'Password change must be self-service');
 assert(adminJs.includes('sb.rpc("vilar_daily_sales"'),'Dashboard must use server-side daily aggregation');
-assert(adminJs.includes('platform_contract')&&adminJs.includes('function contractNotice()'),'Contract notice must use server-side date');
+assert(adminJs.includes('platform_contract')&&adminJs.includes('function contractReminder()'),'Contract reminder must use server-side contract status');
+assert(adminJs.includes('2026-11-24')&&adminJs.includes('2026-11-25')&&adminJs.includes('America/Sao_Paulo'),'Notice must use Brazil dates');
+assert(admin.includes('id="contractBanner"'),'Contract notice must be visible on every admin tab');
+assert(adminJs.includes('setInterval(refreshContractQuietly,300000)'),'Payment confirmation must refresh while dashboard is open');
 assert(tracking.includes('demo_token'),'Tracking page must support isolated demo links');
 assert(statusApi.includes('demo_order_events')&&statusApi.includes('is_test:isTest'),'Status API must distinguish test orders');
 assert(!adminJs.includes('sb.from("orders").insert({product_id'),'Demo must never write to real orders');
